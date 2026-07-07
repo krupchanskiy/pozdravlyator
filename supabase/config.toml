@@ -1,0 +1,7 @@
+# Конфиг Supabase CLI. Проект PanditJi (общий), таблицы «Поздравлятора» — с префиксом pzd_.
+project_id = "intcymsjpbkyrflfcwzf"
+
+# Эндпоинт авторизации вызывается до входа (анонимно) и сам проверяет
+# подпись Telegram, поэтому проверку пользовательского JWT отключаем.
+[functions.telegram-auth]
+verify_jwt = false

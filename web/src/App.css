@@ -1,0 +1,100 @@
+.screen {
+  min-height: 100svh;
+  max-width: 640px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.screen.center {
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.error {
+  color: var(--danger);
+  margin-top: 12px;
+}
+
+/* --- Экран входа --- */
+.login-box {
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.brand {
+  font-size: 32px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.tg-login {
+  margin-top: 8px;
+  min-height: 48px;
+}
+
+/* --- Главный экран --- */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+}
+
+.app-title {
+  font-weight: 700;
+  font-size: 18px;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 15px;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.content {
+  padding: 20px;
+  flex-grow: 1;
+}
+
+.hello {
+  font-size: 24px;
+  font-weight: 700;
+  margin: 8px 0 20px;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px;
+}
+
+.card-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+
+.empty {
+  line-height: 1.5;
+}

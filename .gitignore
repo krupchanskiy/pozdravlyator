@@ -1,0 +1,21 @@
+# Зависимости
+node_modules/
+web/node_modules/
+
+# Сборка
+web/dist/
+
+# Секреты и локальные переменные окружения — НИКОГДА не коммитим
+.env
+.env.local
+.env.*.local
+web/.env
+web/.env.local
+
+# Supabase
+supabase/.temp/
+supabase/.branches/
+
+# Прочее
+.DS_Store
+*.log
