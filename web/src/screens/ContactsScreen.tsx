@@ -20,7 +20,7 @@ export function ContactsScreen({ onGenerate }: Props) {
   const [mode, setMode] = useState<Mode>({ kind: "list" });
   const [contacts, setContacts] = useState<Contact[] | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [catFilter, setCatFilter] = useState("");
+  const [catFilter, setCatFilter] = useState<Set<string>>(new Set());
   const [relFilter, setRelFilter] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -29,7 +29,7 @@ export function ContactsScreen({ onGenerate }: Props) {
     try {
       const [cs, cats] = await Promise.all([
         listContacts({
-          categoryId: catFilter || undefined,
+          categoryIds: catFilter.size ? [...catFilter] : undefined,
           relationshipType: relFilter || undefined,
         }),
         listCategories(),
@@ -45,6 +45,16 @@ export function ContactsScreen({ onGenerate }: Props) {
     reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [catFilter, relFilter]);
+
+  // Чип-фильтр по тегам: мультивыбор, семантика ИЛИ.
+  function toggleCatFilter(id: string) {
+    setCatFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   async function importGoogle() {
     setError(null);
@@ -81,7 +91,7 @@ export function ContactsScreen({ onGenerate }: Props) {
         <h1 className="hello">Контакты</h1>
         <div className="header-actions">
           <button className="btn-secondary small" onClick={() => setMode({ kind: "categories" })}>
-            Категории
+            Теги
           </button>
           <button className="btn-secondary small" onClick={importGoogle}>
             Импорт из Google
@@ -101,15 +111,26 @@ export function ContactsScreen({ onGenerate }: Props) {
             </option>
           ))}
         </select>
-        <select className="input" value={catFilter} onChange={(e) => setCatFilter(e.target.value)}>
-          <option value="">Все категории</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
       </div>
+
+      {categories.length > 0 && (
+        <div className="label-pick tag-filter">
+          {categories.map((c) => (
+            <button
+              key={c.id}
+              className={catFilter.has(c.id) ? "label-btn active" : "label-btn"}
+              onClick={() => toggleCatFilter(c.id)}
+            >
+              {c.name}
+            </button>
+          ))}
+          {catFilter.size > 0 && (
+            <button className="link-btn" onClick={() => setCatFilter(new Set())}>
+              Сбросить
+            </button>
+          )}
+        </div>
+      )}
 
       {error && <p className="error">{error}</p>}
 

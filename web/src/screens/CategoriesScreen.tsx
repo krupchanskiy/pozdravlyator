@@ -31,7 +31,7 @@ function CategoryRow({ cat, onDeleted }: { cat: Category; onDeleted: () => void 
   }
 
   async function remove() {
-    if (!confirm(`Удалить категорию «${cat.name}»? Контакты останутся, привязка к группе исчезнет.`)) return;
+    if (!confirm(`Удалить тег «${cat.name}»? Контакты останутся, привязка исчезнет.`)) return;
     setBusy(true);
     try {
       await deleteCategory(cat.id);
@@ -141,7 +141,7 @@ export function CategoriesScreen({ onBack }: Props) {
       setNewName("");
       await reload();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Не удалось создать категорию");
+      setError(e instanceof Error ? e.message : "Не удалось создать тег");
     }
   }
 
@@ -177,7 +177,7 @@ export function CategoriesScreen({ onBack }: Props) {
   return (
     <div className="form">
       <div className="row-between">
-        <h1 className="hello">Категории</h1>
+        <h1 className="hello">Теги</h1>
         <button className="link-btn" onClick={onBack}>
           ← Назад
         </button>
@@ -188,7 +188,7 @@ export function CategoriesScreen({ onBack }: Props) {
       <div className="cat-add">
         <input
           className="input"
-          placeholder="Новая категория"
+          placeholder="Новый тег"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => {
@@ -220,7 +220,7 @@ export function CategoriesScreen({ onBack }: Props) {
       )}
 
       {cats.length === 0 ? (
-        <p className="muted empty">Категорий пока нет. Создайте первую в поле выше.</p>
+        <p className="muted empty">Тегов пока нет. Создайте первый в поле выше.</p>
       ) : (
         cats.map((c) => <CategoryRow key={c.id} cat={c} onDeleted={reload} />)
       )}

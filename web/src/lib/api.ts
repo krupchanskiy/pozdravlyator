@@ -151,7 +151,7 @@ export async function analyzeWishVectors(trainingSessionId?: string): Promise<nu
 // --- Контакты ---
 
 export interface ContactFilters {
-  categoryId?: string;
+  categoryIds?: string[]; // мультивыбор тегов, семантика ИЛИ
   relationshipType?: string;
 }
 
@@ -163,12 +163,13 @@ export async function listContacts(filters: ContactFilters = {}): Promise<Contac
   if (error) throw error;
   let contacts = (data ?? []) as Contact[];
 
-  // Фильтр по категории — через таблицу связей.
-  if (filters.categoryId) {
+  // Фильтр по тегам (ИЛИ: контакт попадает, если состоит хотя бы в одном) —
+  // через таблицу связей.
+  if (filters.categoryIds && filters.categoryIds.length > 0) {
     const { data: links, error: linkErr } = await supabase
       .from("pzd_contact_category_links")
       .select("contact_id")
-      .eq("category_id", filters.categoryId);
+      .in("category_id", filters.categoryIds);
     if (linkErr) throw linkErr;
     const allowed = new Set((links ?? []).map((l) => l.contact_id as string));
     contacts = contacts.filter((c) => allowed.has(c.id));

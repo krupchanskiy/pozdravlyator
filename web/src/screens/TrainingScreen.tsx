@@ -333,7 +333,7 @@ export function TrainingScreen() {
         {suggestionsCreated > 0 && (
           <p className="warn mt8">
             Появились новые предложения по векторам групп ({suggestionsCreated}) — посмотрите в
-            «Контакты → Категории».
+            «Контакты → Теги».
           </p>
         )}
         <button className="btn-primary mt8" onClick={reset}>

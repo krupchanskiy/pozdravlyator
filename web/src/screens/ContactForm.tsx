@@ -127,7 +127,7 @@ export function ContactForm({ contact, categories, onCancel, onSaved }: Props) {
       setSelectedCats((prev) => new Set(prev).add(cat.id));
       setNewCat("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Не удалось создать категорию");
+      setError(e instanceof Error ? e.message : "Не удалось создать тег");
     }
   }
 
@@ -293,7 +293,7 @@ export function ContactForm({ contact, categories, onCancel, onSaved }: Props) {
       </label>
 
       <div className="field">
-        <span>Категории</span>
+        <span>Теги</span>
         <div className="cat-list">
           {cats.map((c) => (
             <label key={c.id} className="cat-chip">
@@ -305,12 +305,12 @@ export function ContactForm({ contact, categories, onCancel, onSaved }: Props) {
               <span>{c.name}</span>
             </label>
           ))}
-          {cats.length === 0 && <span className="muted">Категорий пока нет</span>}
+          {cats.length === 0 && <span className="muted">Тегов пока нет</span>}
         </div>
         <div className="cat-add">
           <input
             className="input"
-            placeholder="Новая категория"
+            placeholder="Новый тег"
             value={newCat}
             onChange={(e) => setNewCat(e.target.value)}
             onKeyDown={(e) => {

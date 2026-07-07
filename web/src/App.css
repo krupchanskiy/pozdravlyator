@@ -223,7 +223,13 @@ button:disabled {
 .filters {
   display: flex;
   gap: 10px;
-  margin: 4px 0 16px;
+  margin: 4px 0 10px;
+}
+
+/* Чип-фильтр по тегам под фильтрами */
+.tag-filter {
+  margin-bottom: 16px;
+  align-items: center;
 }
 
 .filters .input {
