@@ -63,3 +63,27 @@ export const RELATIONSHIP_TYPES = [
   "родственник",
   "знакомый",
 ] as const;
+
+// --- Стиль ---
+
+export type StyleLabel = "reference" | "ok" | "skip";
+
+export interface StyleExample {
+  id: string;
+  user_id: string;
+  text: string;
+  label: StyleLabel;
+  source_note: string | null;
+  created_at: string;
+}
+
+export interface StyleSettings {
+  user_id: string;
+  emoji_frequency: "often" | "sometimes" | "never" | null;
+  brackets_instead_of_emoji: boolean | null;
+  exclamation_style: "many" | "single_end" | "avoid" | null;
+  capitalization: "always_correct" | "often_lowercase" | null;
+  length_preference: "short" | "medium" | "long" | null;
+}
+
+export type StyleSettingsInput = Omit<StyleSettings, "user_id">;

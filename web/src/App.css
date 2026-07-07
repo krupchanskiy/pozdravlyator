@@ -320,3 +320,92 @@ button:disabled {
 .form-actions .btn-primary {
   flex: 1;
 }
+
+.mt8 {
+  margin-top: 8px;
+}
+
+/* --- Экран «Стиль» --- */
+.card + .card,
+.events {
+  margin-top: 16px;
+}
+
+.card .btn-primary {
+  margin-top: 12px;
+}
+
+.survey {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.survey-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.survey-label {
+  font-size: 14px;
+}
+
+.seg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.seg-btn,
+.label-btn {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 7px 12px;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.seg-btn.active,
+.label-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.label-pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.example-row {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.example-text {
+  white-space: pre-wrap;
+  line-height: 1.45;
+}
+
+.example-note {
+  font-size: 13px;
+}
+
+.example-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.link-btn.danger {
+  color: var(--danger);
+}

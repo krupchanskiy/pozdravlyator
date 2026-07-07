@@ -7,9 +7,10 @@ import { TelegramLogin } from "./components/TelegramLogin";
 import { TimezoneGate } from "./screens/TimezoneGate";
 import { MainScreen } from "./screens/MainScreen";
 import { ContactsScreen } from "./screens/ContactsScreen";
+import { StyleScreen } from "./screens/StyleScreen";
 import "./App.css";
 
-type Tab = "events" | "contacts";
+type Tab = "events" | "contacts" | "style";
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
@@ -75,14 +76,17 @@ export default function App() {
         <button className={tab === "contacts" ? "tab active" : "tab"} onClick={() => setTab("contacts")}>
           Контакты
         </button>
+        <button className={tab === "style" ? "tab active" : "tab"} onClick={() => setTab("style")}>
+          Стиль
+        </button>
       </nav>
 
       <main className="content">
-        {tab === "events" ? (
+        {tab === "events" && (
           <MainScreen firstName={profile?.first_name ?? null} onGoContacts={() => setTab("contacts")} />
-        ) : (
-          <ContactsScreen />
         )}
+        {tab === "contacts" && <ContactsScreen />}
+        {tab === "style" && <StyleScreen />}
       </main>
     </div>
   );

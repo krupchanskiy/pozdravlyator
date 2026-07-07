@@ -1,5 +1,15 @@
 import { supabase } from "./supabase";
-import type { Category, Contact, ContactInput, Profile, UpcomingEvent } from "./types";
+import type {
+  Category,
+  Contact,
+  ContactInput,
+  Profile,
+  StyleExample,
+  StyleLabel,
+  StyleSettings,
+  StyleSettingsInput,
+  UpcomingEvent,
+} from "./types";
 
 // --- Профиль пользователя ---
 
@@ -145,4 +155,63 @@ export async function getUpcomingEvents(daysAhead = 60): Promise<UpcomingEvent[]
   const { data, error } = await supabase.rpc("pzd_events_upcoming", { _days_ahead: daysAhead });
   if (error) throw error;
   return (data ?? []) as UpcomingEvent[];
+}
+
+// --- Примеры стиля (/api/style-examples) ---
+
+export async function listStyleExamples(): Promise<StyleExample[]> {
+  const { data, error } = await supabase
+    .from("pzd_style_examples")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as StyleExample[];
+}
+
+export async function createStyleExample(
+  text: string,
+  label: StyleLabel,
+  sourceNote: string | null,
+): Promise<StyleExample> {
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth.user?.id;
+  if (!uid) throw new Error("Нет сессии");
+  const { data, error } = await supabase
+    .from("pzd_style_examples")
+    .insert({ user_id: uid, text, label, source_note: sourceNote })
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data as StyleExample;
+}
+
+export async function updateStyleExample(
+  id: string,
+  patch: Partial<Pick<StyleExample, "text" | "label" | "source_note">>,
+): Promise<void> {
+  const { error } = await supabase.from("pzd_style_examples").update(patch).eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteStyleExample(id: string): Promise<void> {
+  const { error } = await supabase.from("pzd_style_examples").delete().eq("id", id);
+  if (error) throw error;
+}
+
+// --- Мини-опрос стиля (/api/style-settings) ---
+
+export async function getStyleSettings(): Promise<StyleSettings | null> {
+  const { data, error } = await supabase.from("pzd_style_settings").select("*").maybeSingle();
+  if (error) throw error;
+  return data as StyleSettings | null;
+}
+
+export async function saveStyleSettings(input: StyleSettingsInput): Promise<void> {
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth.user?.id;
+  if (!uid) throw new Error("Нет сессии");
+  const { error } = await supabase
+    .from("pzd_style_settings")
+    .upsert({ user_id: uid, ...input }, { onConflict: "user_id" });
+  if (error) throw error;
 }
