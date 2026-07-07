@@ -118,8 +118,16 @@ Deno.serve(async (req) => {
     const [rh, rm] = ((u.reminder_time as string) || "09:00").split(":").map(Number);
     const reminderMinutes = rh * 60 + rm;
 
-    const reminderDue = ignoreTime || (lp.minutes >= reminderMinutes && lp.minutes < FOLLOWUP_HOUR * 60);
-    const followupDue = ignoreTime ? body.force_pass === "followup" : lp.minutes >= FOLLOWUP_HOUR * 60;
+    // Пользовательское время >= часа повтора: шлём основное без верхней границы,
+    // а повтор пропускаем (не успеет). Иначе основное «не сегодня в 20:00» не
+    // отправилось бы вовсе — окно закрывалось в FOLLOWUP_HOUR.
+    const lateReminder = reminderMinutes >= FOLLOWUP_HOUR * 60;
+    const reminderDue = ignoreTime || (lateReminder
+      ? lp.minutes >= reminderMinutes
+      : lp.minutes >= reminderMinutes && lp.minutes < FOLLOWUP_HOUR * 60);
+    const followupDue = ignoreTime
+      ? body.force_pass === "followup"
+      : !lateReminder && lp.minutes >= FOLLOWUP_HOUR * 60;
 
     // Сегодняшние события пользователя.
     const { data: contacts } = await db
@@ -147,20 +155,22 @@ Deno.serve(async (req) => {
     const chatId = Number(u.telegram_user_id);
 
     for (const { contact, eventType } of events) {
-      // Уже отправленные сегодня записи по этому контакту.
+      // Уже отправленные сегодня записи по этому контакту И ЭТОМУ типу события:
+      // ДР и годовщина в один день — два независимых напоминания.
       const { data: logs } = await db
         .from("pzd_reminders_log")
-        .select("is_followup")
+        .select("is_followup, event_type")
         .eq("user_id", u.id)
         .eq("contact_id", contact.id)
         .eq("event_date", lp.date);
-      const sentMain = (logs ?? []).some((l) => l.is_followup === false);
-      const sentFollow = (logs ?? []).some((l) => l.is_followup === true);
+      const sentMain = (logs ?? []).some((l) => l.event_type === eventType && l.is_followup === false);
+      const sentFollow = (logs ?? []).some((l) => l.event_type === eventType && l.is_followup === true);
 
       if (body.force_pass !== "followup" && reminderDue && (ignoreDedup || !sentMain)) {
         if (await sendReminder(chatId, contact, eventType, false)) {
           await db.from("pzd_reminders_log").insert({
             user_id: u.id, contact_id: contact.id, event_date: lp.date, is_followup: false,
+            event_type: eventType,
           });
           sent++;
         }
@@ -176,6 +186,7 @@ Deno.serve(async (req) => {
         if (!reacted && await sendReminder(chatId, contact, eventType, true)) {
           await db.from("pzd_reminders_log").insert({
             user_id: u.id, contact_id: contact.id, event_date: lp.date, is_followup: true,
+            event_type: eventType,
           });
           followups++;
         }
