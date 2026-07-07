@@ -48,10 +48,9 @@ async function sendReminder(
   eventType: string,
   isFollowup: boolean,
 ): Promise<boolean> {
-  const rel = (contact.relationship_type as string) || "";
   const closeness = contact.closeness ? `Близость: ${contact.closeness}/5` : "";
   const mandatory = contact.is_mandatory ? "⭐ Обязательный" : "";
-  const meta = [rel, closeness, mandatory].filter(Boolean).join(" • ");
+  const meta = [closeness, mandatory].filter(Boolean).join(" • ");
   const uname = contact.telegram_username ? ` (@${esc(contact.telegram_username as string)})` : "";
   const addr = contact.address_form ? `Обращение: на «${contact.address_form}»\n` : "";
   const notes = (contact.context_notes as string)?.trim();

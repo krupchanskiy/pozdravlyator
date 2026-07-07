@@ -7,6 +7,7 @@ import {
   generateGreeting,
   getTrainingSummary,
   listContacts,
+  listContactTags,
   listTrainingSessions,
   startTrainingSession,
   submitFeedback,
@@ -291,8 +292,8 @@ export function TrainingScreen() {
   async function pick() {
     setError(null);
     try {
-      const contacts = await listContacts();
-      const sel = pickRepresentatives(contacts);
+      const [contacts, tags] = await Promise.all([listContacts(), listContactTags()]);
+      const sel = pickRepresentatives(contacts, tags);
       setReps(sel.reps);
       setTotalGroups(sel.totalGroups);
       setCapped(sel.capped);
@@ -402,7 +403,7 @@ export function TrainingScreen() {
     <>
       <h1 className="hello">Тренировка стиля</h1>
       <p className="muted empty">
-        Система подберёт по одному контакту на каждый тип отношений и обращение. Если карточка
+        Система подберёт по одному контакту на каждый тег и обращение. Если карточка
         пустая — сначала спросим пару фактов о человеке (они сохранятся в карточку), потом
         сгенерируем поздравление — оцените или поправьте, чтобы обучить свой стиль.
       </p>
@@ -435,7 +436,7 @@ export function TrainingScreen() {
         <div className="mt8">
           {capped && (
             <p className="warn">
-              Групп отношений: {totalGroups}. За одну сессию тренируем не больше {TRAINING_LIMIT} —
+              Групп (тег + обращение): {totalGroups}. За одну сессию тренируем не больше {TRAINING_LIMIT} —
               взяли первые {TRAINING_LIMIT}, остальные разберите в следующей сессии.
             </p>
           )}

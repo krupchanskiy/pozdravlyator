@@ -8,7 +8,6 @@ export interface Contact {
   name: string;
   call_name: string | null; // как называть в тексте («Саша»), независимо от «ты/вы»
   gender: Gender | null;
-  relationship_type: string | null;
   closeness: number | null;
   address_form: AddressForm | null;
   is_mandatory: boolean;
@@ -48,7 +47,6 @@ export interface UpcomingEvent {
   contact_id: string;
   name: string;
   is_mandatory: boolean;
-  relationship_type: string | null;
   address_form: AddressForm | null;
   closeness: number | null;
   telegram_username: string | null;
@@ -69,15 +67,6 @@ export interface Profile {
   reminder_enabled: boolean;
   remind_mandatory_only: boolean;
 }
-
-// Стандартные типы отношений (relationship_type — свободный текст, это лишь подсказки).
-export const RELATIONSHIP_TYPES = [
-  "Старший коллега",
-  "Равный коллега",
-  "Сотрудник",
-  "Друг",
-  "Клиент",
-] as const;
 
 // --- Стиль ---
 

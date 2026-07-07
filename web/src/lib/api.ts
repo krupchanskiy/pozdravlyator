@@ -152,14 +152,10 @@ export async function analyzeWishVectors(trainingSessionId?: string): Promise<nu
 
 export interface ContactFilters {
   categoryIds?: string[]; // мультивыбор тегов, семантика ИЛИ
-  relationshipType?: string;
 }
 
 export async function listContacts(filters: ContactFilters = {}): Promise<Contact[]> {
-  let query = supabase.from("pzd_contacts").select("*").order("name");
-  if (filters.relationshipType) query = query.eq("relationship_type", filters.relationshipType);
-
-  const { data, error } = await query;
+  const { data, error } = await supabase.from("pzd_contacts").select("*").order("name");
   if (error) throw error;
   let contacts = (data ?? []) as Contact[];
 
@@ -175,6 +171,24 @@ export async function listContacts(filters: ContactFilters = {}): Promise<Contac
     contacts = contacts.filter((c) => allowed.has(c.id));
   }
   return contacts;
+}
+
+// Карта контакт → имена тегов (подписи в списке, группировка тренировки).
+export async function listContactTags(): Promise<Map<string, string[]>> {
+  const { data, error } = await supabase
+    .from("pzd_contact_category_links")
+    .select("contact_id, pzd_contact_categories(name)");
+  if (error) throw error;
+  const map = new Map<string, string[]>();
+  const rows = (data ?? []) as unknown as { contact_id: string; pzd_contact_categories: { name: string } | null }[];
+  for (const row of rows) {
+    const name = row.pzd_contact_categories?.name;
+    if (!name) continue;
+    const arr = map.get(row.contact_id) ?? [];
+    arr.push(name);
+    map.set(row.contact_id, arr);
+  }
+  return map;
 }
 
 // Один контакт по id (для открытия карточки кликом по имени с любого экрана).

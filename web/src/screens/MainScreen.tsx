@@ -62,7 +62,6 @@ export function MainScreen({ firstName, onGoContacts, onGenerate, onEditContact 
                   </div>
                   <div className="event-sub muted">
                     {EVENT_LABELS[e.event_type]}
-                    {e.relationship_type ? ` • ${e.relationship_type}` : ""}
                     {e.closeness ? ` • близость ${e.closeness}/5` : ""}
                   </div>
                   <button

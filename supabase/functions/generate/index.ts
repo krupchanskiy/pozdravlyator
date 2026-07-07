@@ -65,6 +65,7 @@ function buildPrompt(
   okCount: number,
   editPairs: { before: string; after: string }[],
   wishVectors: string[],
+  tagNames: string[],
   eventType: string,
   userWishes: string | null,
   count: number,
@@ -123,7 +124,7 @@ function buildPrompt(
     "Контекст получателя:\n" +
     `- Имя: ${contact.name}\n` +
     (contact.call_name ? `- Как называть в тексте: ${contact.call_name}\n` : "") +
-    `- Тип отношений: ${contact.relationship_type ?? "не указан"}\n` +
+    (tagNames.length ? `- Группы (теги): ${tagNames.join(", ")}\n` : "") +
     `- Близость: ${contact.closeness ?? "?"}/5\n` +
     `- Обращение: на «${contact.address_form ?? "ты"}»\n` +
     `- Пол: ${contact.gender ? genderMap[contact.gender as string] : "не указан"}\n` +
@@ -214,12 +215,17 @@ Deno.serve(async (req) => {
 
   const { data: settings } = await db.from("pzd_style_settings").select("*").maybeSingle();
 
-  // Групповые вектора пожеланий категорий контакта (раздел 6a).
+  // Теги контакта: имена — в контекст промпта (заменяют упразднённый «тип
+  // отношений»), вектора пожеланий — наравне с фактами (раздел 6a).
   const { data: catLinks } = await db
     .from("pzd_contact_category_links")
-    .select("pzd_contact_categories(wish_vector)")
+    .select("pzd_contact_categories(name, wish_vector)")
     .eq("contact_id", contactId);
-  const wishVectors = ((catLinks ?? []) as { pzd_contact_categories?: { wish_vector?: string } }[])
+  const linkedCats = (catLinks ?? []) as { pzd_contact_categories?: { name?: string; wish_vector?: string } }[];
+  const tagNames = linkedCats
+    .map((l) => l.pzd_contact_categories?.name?.trim())
+    .filter((n): n is string => !!n);
+  const wishVectors = linkedCats
     .map((l) => l.pzd_contact_categories?.wish_vector?.trim())
     .filter((v): v is string => !!v);
 
@@ -254,6 +260,7 @@ Deno.serve(async (req) => {
     okCount ?? 0,
     editPairs,
     wishVectors,
+    tagNames,
     eventType,
     userWishes,
     count,

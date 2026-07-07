@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { googleImportInit, listCategories, listContacts } from "../lib/api";
+import { googleImportInit, listCategories, listContacts, listContactTags } from "../lib/api";
 import type { Category, Contact } from "../lib/types";
-import { RELATIONSHIP_TYPES } from "../lib/types";
 import type { GenTarget } from "../App";
 import { ContactForm } from "./ContactForm";
 import { CategoriesScreen } from "./CategoriesScreen";
@@ -21,7 +20,7 @@ export function ContactsScreen({ onGenerate }: Props) {
   const [contacts, setContacts] = useState<Contact[] | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [catFilter, setCatFilter] = useState<Set<string>>(new Set());
-  const [relFilter, setRelFilter] = useState("");
+  const [tagsByContact, setTagsByContact] = useState<Map<string, string[]>>(new Map());
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -37,15 +36,14 @@ export function ContactsScreen({ onGenerate }: Props) {
   async function reload() {
     setError(null);
     try {
-      const [cs, cats] = await Promise.all([
-        listContacts({
-          categoryIds: catFilter.size ? [...catFilter] : undefined,
-          relationshipType: relFilter || undefined,
-        }),
+      const [cs, cats, tags] = await Promise.all([
+        listContacts({ categoryIds: catFilter.size ? [...catFilter] : undefined }),
         listCategories(),
+        listContactTags(),
       ]);
       setContacts(cs);
       setCategories(cats);
+      setTagsByContact(tags);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Ошибка загрузки");
     }
@@ -54,7 +52,7 @@ export function ContactsScreen({ onGenerate }: Props) {
   useEffect(() => {
     reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [catFilter, relFilter]);
+  }, [catFilter]);
 
   // Чип-фильтр по тегам: мультивыбор, семантика ИЛИ.
   function toggleCatFilter(id: string) {
@@ -120,17 +118,6 @@ export function ContactsScreen({ onGenerate }: Props) {
         onChange={(e) => setSearch(e.target.value)}
       />
 
-      <div className="filters">
-        <select className="input" value={relFilter} onChange={(e) => setRelFilter(e.target.value)}>
-          <option value="">Все типы отношений</option>
-          {RELATIONSHIP_TYPES.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </select>
-      </div>
-
       {categories.length > 0 && (
         <div className="label-pick tag-filter">
           {categories.map((c) => (
@@ -170,7 +157,11 @@ export function ContactsScreen({ onGenerate }: Props) {
                   {c.name}
                 </div>
                 <div className="contact-sub muted">
-                  {[c.relationship_type, c.closeness ? `близость ${c.closeness}/5` : null, c.address_form ? `на «${c.address_form}»` : null]
+                  {[
+                    (tagsByContact.get(c.id) ?? []).join(", ") || null,
+                    c.closeness ? `близость ${c.closeness}/5` : null,
+                    c.address_form ? `на «${c.address_form}»` : null,
+                  ]
                     .filter(Boolean)
                     .join(" • ")}
                 </div>

@@ -9,7 +9,6 @@ import {
 } from "../lib/api";
 import type { GenerationHistoryItem } from "../lib/api";
 import type { Category, Contact, ContactInput } from "../lib/types";
-import { RELATIONSHIP_TYPES } from "../lib/types";
 import { EVENT_LABELS, formatDate } from "../lib/format";
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -76,7 +75,6 @@ function emptyInput(): ContactInput {
     name: "",
     call_name: null,
     gender: null,
-    relationship_type: null,
     closeness: null,
     address_form: null,
     is_mandatory: false,
@@ -188,21 +186,6 @@ export function ContactForm({ contact, categories, onCancel, onSaved }: Props) {
           <option value="male">Мужской</option>
           <option value="female">Женский</option>
         </select>
-      </label>
-
-      <label className="field">
-        <span>Тип отношений</span>
-        <input
-          className="input"
-          list="rel-types"
-          value={form.relationship_type ?? ""}
-          onChange={(e) => set("relationship_type", e.target.value || null)}
-        />
-        <datalist id="rel-types">
-          {RELATIONSHIP_TYPES.map((r) => (
-            <option key={r} value={r} />
-          ))}
-        </datalist>
       </label>
 
       <label className="field">

@@ -299,7 +299,6 @@ function matchAddCommand(text: string): boolean {
 interface ParsedContact {
   name: string | null;
   call_name: string | null;
-  relationship_type: string | null;
   closeness: number | null;
   address_form: string | null;
   gender: string | null;
@@ -325,11 +324,10 @@ async function parseContact(text: string): Promise<ParsedContact | null> {
     "{\n" +
     '  "name": строка — имя человека (не сам пользователь),\n' +
     '  "call_name": строка|null — как называть в поздравлении (напр. «Саша»), если указано отдельно от имени,\n' +
-    '  "relationship_type": строка|null — тип отношений; предпочитай один из: «Старший коллега», «Равный коллега», «Сотрудник», «Друг», «Клиент» (если не подходит — свой свободный текст),\n' +
     '  "closeness": целое 1..5|null — только если явно понятно,\n' +
     '  "address_form": "ты"|"вы"|null — только если явно понятно,\n' +
     '  "gender": "male"|"female"|null — только если явно сказано; по имени НЕ угадывай,\n' +
-    '  "context_notes": строка|null — факты, интересы, привычки (без имени/даты/типа отношений),\n' +
+    '  "context_notes": строка|null — факты, интересы, привычки, характер отношений («коллега по работе», «старый друг») — всё, кроме имени и дат,\n' +
     '  "is_mandatory": true|false — true только если явно отмечена важность,\n' +
     '  "birthday_month": целое 1..12|null, "birthday_day": целое 1..31|null, "birthday_year": целое|null,\n' +
     '  "anniversary_month": целое|null, "anniversary_day": целое|null, "anniversary_year": целое|null,\n' +
@@ -413,7 +411,6 @@ async function handleAddContact(
       user_id: uid,
       name: parsed.name.trim(),
       call_name: parsed.call_name?.trim() || null,
-      relationship_type: parsed.relationship_type?.trim() || null,
       closeness,
       address_form: addressForm,
       gender,
@@ -446,7 +443,6 @@ async function handleAddContact(
     );
   }
   const meta = [
-    parsed.relationship_type?.trim() || null,
     closeness ? `близость ${closeness}/5` : null,
     addressForm ? `на «${addressForm}»` : null,
     parsed.is_mandatory ? "⭐ обязательный" : null,
