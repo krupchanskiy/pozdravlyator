@@ -59,6 +59,10 @@ function CategoryRow({ cat, onDeleted }: { cat: Category; onDeleted: () => void 
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
+        <span className="muted" style={{ fontSize: 12 }}>
+          Можно задать конкретную фразу. Слово ИМЯ (заглавными) заменится на имя контакта
+          (или «Как называть», если задано): «Харе Кришна, дорогой ИМЯ!»
+        </span>
       </label>
       <div className="example-actions">
         <button className="btn-primary small" onClick={save}>
