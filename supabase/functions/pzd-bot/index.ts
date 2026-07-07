@@ -298,6 +298,7 @@ function matchAddCommand(text: string): boolean {
 
 interface ParsedContact {
   name: string | null;
+  call_name: string | null;
   relationship_type: string | null;
   closeness: number | null;
   address_form: string | null;
@@ -323,6 +324,7 @@ async function parseContact(text: string): Promise<ParsedContact | null> {
     "поздравлений. Верни ТОЛЬКО JSON-объект (без пояснений, без markdown) со СТРОГО такими ключами:\n" +
     "{\n" +
     '  "name": строка — имя человека (не сам пользователь),\n' +
+    '  "call_name": строка|null — как называть в поздравлении (напр. «Саша»), если указано отдельно от имени,\n' +
     '  "relationship_type": строка|null — тип отношений; предпочитай один из: «Старший коллега», «Равный коллега», «Сотрудник», «Друг», «Клиент» (если не подходит — свой свободный текст),\n' +
     '  "closeness": целое 1..5|null — только если явно понятно,\n' +
     '  "address_form": "ты"|"вы"|null — только если явно понятно,\n' +
@@ -410,6 +412,7 @@ async function handleAddContact(
     .insert({
       user_id: uid,
       name: parsed.name.trim(),
+      call_name: parsed.call_name?.trim() || null,
       relationship_type: parsed.relationship_type?.trim() || null,
       closeness,
       address_form: addressForm,
@@ -429,6 +432,7 @@ async function handleAddContact(
   }
 
   const lines = ["✅ Добавил контакт:", `<b>${esc(parsed.name.trim())}</b>`];
+  if (parsed.call_name?.trim()) lines.push(`Как называть: ${esc(parsed.call_name.trim())}`);
   if (birthday && parsed.birthday_month && parsed.birthday_day) {
     lines.push(
       `🎂 ${parsed.birthday_day} ${MONTHS_RU[parsed.birthday_month - 1]}` +

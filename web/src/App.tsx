@@ -10,6 +10,7 @@ import { ContactsScreen } from "./screens/ContactsScreen";
 import { StyleScreen } from "./screens/StyleScreen";
 import { TrainingScreen } from "./screens/TrainingScreen";
 import { GenerateScreen } from "./screens/GenerateScreen";
+import { EditContactScreen } from "./screens/EditContactScreen";
 import { SettingsScreen } from "./screens/SettingsScreen";
 import type { EventType } from "./lib/types";
 import "./App.css";
@@ -28,6 +29,10 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("events");
   const [gen, setGen] = useState<GenTarget | null>(null);
+  // Карточка контакта поверх любого экрана (клик по имени); refreshKey
+  // перемонтирует контент после сохранения, чтобы списки перечитались.
+  const [editContactId, setEditContactId] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const importHandled = useRef(false);
@@ -104,6 +109,18 @@ export default function App() {
     );
   }
 
+  if (editContactId) {
+    return (
+      <EditContactScreen
+        contactId={editContactId}
+        onClose={(saved) => {
+          setEditContactId(null);
+          if (saved) setRefreshKey((k) => k + 1);
+        }}
+      />
+    );
+  }
+
   if (gen) {
     return (
       <GenerateScreen
@@ -111,6 +128,7 @@ export default function App() {
         contactName={gen.contactName}
         initialEventType={gen.eventType}
         onBack={() => setGen(null)}
+        onEditContact={setEditContactId}
       />
     );
   }
@@ -173,12 +191,13 @@ export default function App() {
         </div>
       )}
 
-      <main className="content">
+      <main className="content" key={refreshKey}>
         {tab === "events" && (
           <MainScreen
             firstName={profile?.first_name ?? null}
             onGoContacts={() => setTab("contacts")}
             onGenerate={setGen}
+            onEditContact={setEditContactId}
           />
         )}
         {tab === "contacts" && <ContactsScreen onGenerate={setGen} />}

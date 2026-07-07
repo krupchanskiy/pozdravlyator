@@ -74,6 +74,7 @@ interface Props {
 function emptyInput(): ContactInput {
   return {
     name: "",
+    call_name: null,
     gender: null,
     relationship_type: null,
     closeness: null,
@@ -231,6 +232,16 @@ export function ContactForm({ contact, categories, onCancel, onSaved }: Props) {
           <option value="ты">на «ты»</option>
           <option value="вы">на «вы»</option>
         </select>
+      </label>
+
+      <label className="field">
+        <span>Как называть</span>
+        <input
+          className="input"
+          placeholder="напр. Саша — даже если на «вы»"
+          value={form.call_name ?? ""}
+          onChange={(e) => set("call_name", e.target.value || null)}
+        />
       </label>
 
       <label className="field-check">

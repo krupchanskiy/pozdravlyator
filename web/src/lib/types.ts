@@ -6,6 +6,7 @@ export interface Contact {
   id: string;
   user_id: string;
   name: string;
+  call_name: string | null; // как называть в тексте («Саша»), независимо от «ты/вы»
   gender: Gender | null;
   relationship_type: string | null;
   closeness: number | null;

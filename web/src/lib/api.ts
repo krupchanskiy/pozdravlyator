@@ -177,6 +177,13 @@ export async function listContacts(filters: ContactFilters = {}): Promise<Contac
   return contacts;
 }
 
+// Один контакт по id (для открытия карточки кликом по имени с любого экрана).
+export async function getContact(id: string): Promise<Contact | null> {
+  const { data, error } = await supabase.from("pzd_contacts").select("*").eq("id", id).maybeSingle();
+  if (error) throw error;
+  return data as Contact | null;
+}
+
 export async function getContactCategoryIds(contactId: string): Promise<string[]> {
   const { data, error } = await supabase
     .from("pzd_contact_category_links")

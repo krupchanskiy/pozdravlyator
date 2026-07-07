@@ -8,10 +8,11 @@ interface Props {
   firstName: string | null;
   onGoContacts: () => void;
   onGenerate: (t: GenTarget) => void;
+  onEditContact: (contactId: string) => void;
 }
 
 // Главный экран — список ближайших событий (/api/events/upcoming).
-export function MainScreen({ firstName, onGoContacts, onGenerate }: Props) {
+export function MainScreen({ firstName, onGoContacts, onGenerate, onEditContact }: Props) {
   const [events, setEvents] = useState<UpcomingEvent[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,7 +52,11 @@ export function MainScreen({ firstName, onGoContacts, onGenerate }: Props) {
                   <span className="event-rel muted">{formatDaysUntil(e.days_until)}</span>
                 </div>
                 <div className="event-main">
-                  <div className="event-name">
+                  <div
+                    className="event-name clickable"
+                    title="Открыть карточку контакта"
+                    onClick={() => onEditContact(e.contact_id)}
+                  >
                     {e.is_mandatory && <span className="star" title="Обязательный">★</span>}
                     {e.name}
                   </div>

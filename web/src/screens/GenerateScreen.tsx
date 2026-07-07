@@ -8,6 +8,7 @@ interface Props {
   contactName: string;
   initialEventType: EventType;
   onBack: () => void;
+  onEditContact: (contactId: string) => void;
 }
 
 const EVENT_OPTIONS: EventType[] = ["birthday", "anniversary", "new_year", "mar8", "feb23"];
@@ -152,7 +153,7 @@ function VariantCard({
   );
 }
 
-export function GenerateScreen({ contactId, contactName, initialEventType, onBack }: Props) {
+export function GenerateScreen({ contactId, contactName, initialEventType, onBack, onEditContact }: Props) {
   const [eventType, setEventType] = useState<EventType>(initialEventType);
   const [wishes, setWishes] = useState("");
   const [loading, setLoading] = useState(false);
@@ -189,7 +190,13 @@ export function GenerateScreen({ contactId, contactName, initialEventType, onBac
       </header>
 
       <main className="content form">
-        <h1 className="hello">{contactName}</h1>
+        <h1
+          className="hello clickable"
+          title="Открыть карточку контакта"
+          onClick={() => onEditContact(contactId)}
+        >
+          {contactName}
+        </h1>
 
         <label className="field">
           <span>Событие</span>

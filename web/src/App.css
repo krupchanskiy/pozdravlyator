@@ -260,6 +260,15 @@ button:disabled {
   font-weight: 600;
 }
 
+/* Кликабельное имя → карточка контакта */
+.clickable {
+  cursor: pointer;
+}
+
+.clickable:active {
+  opacity: 0.7;
+}
+
 .contact-sub,
 .event-sub {
   font-size: 13px;
