@@ -240,3 +240,40 @@ export async function generateGreeting(
   }
   return { ok: true, variants: data.variants, warning: data.warning, generationId: data.generation_id };
 }
+
+// POST /api/generate/:id/feedback — 👍/👎 + причина по конкретному варианту.
+export async function submitFeedback(
+  generationId: string,
+  variantIndex: number,
+  feedback: "good" | "bad",
+  badReason: string | null,
+): Promise<void> {
+  const { data, error } = await supabase
+    .from("pzd_generations")
+    .select("variants")
+    .eq("id", generationId)
+    .single();
+  if (error) throw error;
+  const variants = (data.variants ?? []) as Record<string, unknown>[];
+  if (variants[variantIndex]) {
+    variants[variantIndex] = { ...variants[variantIndex], feedback, bad_reason: badReason };
+  }
+  const { error: e2 } = await supabase
+    .from("pzd_generations")
+    .update({ variants })
+    .eq("id", generationId);
+  if (e2) throw e2;
+}
+
+// POST /api/generate/:id/finalize — итоговый (отредактированный) текст.
+export async function finalizeGeneration(
+  generationId: string,
+  variantIndex: number,
+  finalText: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("pzd_generations")
+    .update({ final_text: finalText, final_variant_index: variantIndex })
+    .eq("id", generationId);
+  if (error) throw error;
+}

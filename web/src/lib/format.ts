@@ -26,3 +26,12 @@ export const EVENT_LABELS: Record<EventType, string> = {
   mar8: "8 марта",
   feb23: "23 февраля",
 };
+
+// Причины «плохо» (раздел 9 ТЗ).
+export const BAD_REASONS = [
+  "слишком формально",
+  "слишком фамильярно",
+  "слишком длинно",
+  "слишком коротко",
+  "не мой стиль",
+] as const;

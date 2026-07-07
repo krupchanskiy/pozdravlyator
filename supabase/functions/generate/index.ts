@@ -63,6 +63,7 @@ function buildPrompt(
   settings: Record<string, unknown> | null,
   referenceExamples: string[],
   okCount: number,
+  editPairs: { before: string; after: string }[],
   eventType: string,
   userWishes: string | null,
 ) {
@@ -74,6 +75,16 @@ function buildPrompt(
     if (okCount > 0) refBlock += `\n\nЕщё ${okCount} обычных примеров задают общий тон.`;
   }
 
+  // Few-shot по правкам: что сгенерировали → как пользователь на самом деле отправил.
+  let editBlock = "";
+  if (editPairs.length) {
+    editBlock =
+      "\n\nКак пользователь правит сгенерированное (важный сигнал — учитывай эти правки; было → стало):\n" +
+      editPairs
+        .map((p, i) => `${i + 1}. Было: «${p.before}»\n   Стало: «${p.after}»`)
+        .join("\n");
+  }
+
   const system =
     "Ты пишешь поздравления ОТ ЛИЦА пользователя, в точности повторяя его личный стиль письма.\n" +
     "Правила:\n" +
@@ -83,7 +94,8 @@ function buildPrompt(
     "- Подражай стилю пользователя по эталонным примерам и настройкам, но не копируй примеры дословно.\n" +
     "- Верни РОВНО 3 разных варианта поздравления.\n\n" +
     `Стиль пользователя: ${styleDescription(settings)}.` +
-    refBlock;
+    refBlock +
+    editBlock;
 
   const genderMap: Record<string, string> = { male: "мужчина", female: "женщина" };
   const eventLabel = EVENT_LABELS[eventType] ?? eventType;
@@ -176,11 +188,36 @@ Deno.serve(async (req) => {
 
   const { data: settings } = await db.from("pzd_style_settings").select("*").maybeSingle();
 
+  // Последние правки пользователя (сгенерировано → отправлено) как few-shot.
+  const { data: gens } = await db
+    .from("pzd_generations")
+    .select("variants, final_text, final_variant_index")
+    .not("final_text", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
+  const editPairs: { before: string; after: string }[] = [];
+  for (const g of gens ?? []) {
+    const variants = (g.variants ?? []) as { text: string; feedback?: string }[];
+    let base: string | null = null;
+    if (g.final_variant_index != null && variants[g.final_variant_index as number]) {
+      base = variants[g.final_variant_index as number].text;
+    } else {
+      base = variants.find((v) => v.feedback === "good")?.text ?? variants[0]?.text ?? null;
+    }
+    const finalText = g.final_text as string;
+    if (base && finalText && base.trim() !== finalText.trim()) {
+      editPairs.push({ before: base, after: finalText });
+    }
+    if (editPairs.length >= 3) break;
+  }
+
   const { system, user } = buildPrompt(
     contact,
     settings,
     referenceExamples,
     okCount ?? 0,
+    editPairs,
     eventType,
     userWishes,
   );

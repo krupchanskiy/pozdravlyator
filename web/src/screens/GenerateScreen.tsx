@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { generateGreeting } from "../lib/api";
+import { finalizeGeneration, generateGreeting, submitFeedback } from "../lib/api";
 import type { EventType } from "../lib/types";
-import { EVENT_LABELS } from "../lib/format";
+import { BAD_REASONS, EVENT_LABELS } from "../lib/format";
 
 interface Props {
   contactId: string;
@@ -12,6 +12,146 @@ interface Props {
 
 const EVENT_OPTIONS: EventType[] = ["birthday", "anniversary", "new_year", "mar8", "feb23"];
 
+// --- Карточка одного варианта: фидбек + правка перед копированием ---
+function VariantCard({
+  text,
+  index,
+  generationId,
+}: {
+  text: string;
+  index: number;
+  generationId: string | null;
+}) {
+  const [state, setState] = useState<"idle" | "bad" | "editing">("idle");
+  const [reason, setReason] = useState<string>("");
+  const [comment, setComment] = useState("");
+  const [editText, setEditText] = useState(text);
+  const [status, setStatus] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  async function good() {
+    if (!generationId) return;
+    try {
+      await submitFeedback(generationId, index, "good", null);
+      setStatus("👍 Отмечено");
+    } catch {
+      setError("Не удалось сохранить оценку");
+    }
+  }
+
+  async function sendBad() {
+    if (!generationId || !reason) return;
+    const full = comment.trim() ? `${reason}: ${comment.trim()}` : reason;
+    try {
+      await submitFeedback(generationId, index, "bad", full);
+      setState("idle");
+      setStatus("👎 Причина сохранена");
+    } catch {
+      setError("Не удалось сохранить оценку");
+    }
+  }
+
+  async function copyFinal() {
+    try {
+      await navigator.clipboard.writeText(editText);
+    } catch {
+      /* clipboard может быть недоступен — не критично */
+    }
+    if (generationId) {
+      try {
+        await finalizeGeneration(generationId, index, editText);
+      } catch {
+        setError("Не удалось сохранить итоговый текст");
+        return;
+      }
+    }
+    setState("idle");
+    setStatus(
+      editText.trim() === text.trim() ? "Скопировано ✓" : "Скопировано (правка сохранена) ✓",
+    );
+  }
+
+  return (
+    <li className="example-row">
+      {state === "editing" ? (
+        <>
+          <span className="muted" style={{ fontSize: 13 }}>
+            Отредактируйте перед копированием — правка сохранится как обучающий сигнал:
+          </span>
+          <textarea
+            className="input"
+            rows={4}
+            value={editText}
+            onChange={(e) => setEditText(e.target.value)}
+          />
+          <div className="example-actions">
+            <button className="btn-primary" onClick={copyFinal}>
+              Скопировать
+            </button>
+            <button className="btn-secondary" onClick={() => setState("idle")}>
+              Отмена
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="example-text">{text}</div>
+          {status && <span className="muted" style={{ fontSize: 13 }}>{status}</span>}
+          {error && <span className="error" style={{ fontSize: 13 }}>{error}</span>}
+          <div className="example-actions">
+            <button className="btn-secondary" onClick={good}>
+              👍 Хорошо
+            </button>
+            <button className="btn-secondary" onClick={() => setState("bad")}>
+              👎 Плохо
+            </button>
+            <button
+              className="btn-primary"
+              onClick={() => {
+                setEditText(text);
+                setState("editing");
+              }}
+            >
+              Копировать
+            </button>
+          </div>
+        </>
+      )}
+
+      {state === "bad" && (
+        <div className="bad-form">
+          <div className="label-pick">
+            {BAD_REASONS.map((r) => (
+              <button
+                key={r}
+                className={reason === r ? "label-btn active" : "label-btn"}
+                onClick={() => setReason(r)}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+          <textarea
+            className="input"
+            rows={2}
+            placeholder="Комментарий (необязательно)"
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+          />
+          <div className="example-actions">
+            <button className="btn-primary" onClick={sendBad} disabled={!reason}>
+              Отправить
+            </button>
+            <button className="btn-secondary" onClick={() => setState("idle")}>
+              Отмена
+            </button>
+          </div>
+        </div>
+      )}
+    </li>
+  );
+}
+
 export function GenerateScreen({ contactId, contactName, initialEventType, onBack }: Props) {
   const [eventType, setEventType] = useState<EventType>(initialEventType);
   const [wishes, setWishes] = useState("");
@@ -19,7 +159,7 @@ export function GenerateScreen({ contactId, contactName, initialEventType, onBac
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [variants, setVariants] = useState<string[] | null>(null);
-  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const [generationId, setGenerationId] = useState<string | null>(null);
 
   async function generate() {
     setLoading(true);
@@ -31,19 +171,10 @@ export function GenerateScreen({ contactId, contactName, initialEventType, onBac
     if (res.ok) {
       setVariants(res.variants);
       setWarning(res.warning);
+      setGenerationId(res.generationId);
     } else {
       // Пожелания пользователя НЕ теряем — они остаются в поле.
       setError(res.message);
-    }
-  }
-
-  async function copy(text: string, idx: number) {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedIdx(idx);
-      setTimeout(() => setCopiedIdx((c) => (c === idx ? null : c)), 1500);
-    } catch {
-      setError("Не удалось скопировать");
     }
   }
 
@@ -104,14 +235,7 @@ export function GenerateScreen({ contactId, contactName, initialEventType, onBac
         {variants && (
           <ul className="event-list">
             {variants.map((v, i) => (
-              <li key={i} className="example-row">
-                <div className="example-text">{v}</div>
-                <div className="example-actions">
-                  <button className="btn-secondary" onClick={() => copy(v, i)}>
-                    {copiedIdx === i ? "Скопировано ✓" : "Копировать"}
-                  </button>
-                </div>
-              </li>
+              <VariantCard key={`${generationId}-${i}`} text={v} index={i} generationId={generationId} />
             ))}
           </ul>
         )}
