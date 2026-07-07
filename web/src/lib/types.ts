@@ -27,6 +27,18 @@ export interface Category {
   id: string;
   user_id: string;
   name: string;
+  wish_vector: string | null;
+}
+
+export type WishSuggestionStatus = "pending" | "accepted" | "edited" | "rejected";
+
+export interface WishSuggestion {
+  id: string;
+  category_id: string;
+  category_name: string;
+  suggested_text: string;
+  status: WishSuggestionStatus;
+  created_at: string;
 }
 
 export type EventType = "birthday" | "new_year" | "mar8" | "feb23" | "anniversary";

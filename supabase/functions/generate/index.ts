@@ -64,6 +64,7 @@ function buildPrompt(
   referenceExamples: string[],
   okCount: number,
   editPairs: { before: string; after: string }[],
+  wishVectors: string[],
   eventType: string,
   userWishes: string | null,
   count: number,
@@ -103,6 +104,11 @@ function buildPrompt(
   const eventLabel = EVENT_LABELS[eventType] ?? eventType;
   const anniv = contact.anniversary_label ? ` (${contact.anniversary_label})` : "";
 
+  // Групповые вектора пожеланий — наравне с фактами о контакте (раздел 6a).
+  const wishBlock = wishVectors.length
+    ? `- Общие пожелания для групп этого контакта (учитывай наравне с фактами): ${wishVectors.join("; ")}\n`
+    : "";
+
   const user =
     "Контекст получателя:\n" +
     `- Имя: ${contact.name}\n` +
@@ -110,8 +116,9 @@ function buildPrompt(
     `- Близость: ${contact.closeness ?? "?"}/5\n` +
     `- Обращение: на «${contact.address_form ?? "ты"}»\n` +
     `- Пол: ${contact.gender ? genderMap[contact.gender as string] : "не указан"}\n` +
-    `- Факты о человеке: ${(contact.context_notes as string)?.trim() || "фактов нет"}\n\n` +
-    `Событие: ${eventLabel}${anniv}\n` +
+    `- Факты о человеке: ${(contact.context_notes as string)?.trim() || "фактов нет"}\n` +
+    wishBlock +
+    `\nСобытие: ${eventLabel}${anniv}\n` +
     `Пожелания пользователя к тексту: ${userWishes?.trim() || "нет"}\n\n` +
     `Напиши ${nWord} поздравления.`;
 
@@ -196,6 +203,15 @@ Deno.serve(async (req) => {
 
   const { data: settings } = await db.from("pzd_style_settings").select("*").maybeSingle();
 
+  // Групповые вектора пожеланий категорий контакта (раздел 6a).
+  const { data: catLinks } = await db
+    .from("pzd_contact_category_links")
+    .select("pzd_contact_categories(wish_vector)")
+    .eq("contact_id", contactId);
+  const wishVectors = ((catLinks ?? []) as { pzd_contact_categories?: { wish_vector?: string } }[])
+    .map((l) => l.pzd_contact_categories?.wish_vector?.trim())
+    .filter((v): v is string => !!v);
+
   // Последние правки пользователя (сгенерировано → отправлено) как few-shot.
   const { data: gens } = await db
     .from("pzd_generations")
@@ -226,6 +242,7 @@ Deno.serve(async (req) => {
     referenceExamples,
     okCount ?? 0,
     editPairs,
+    wishVectors,
     eventType,
     userWishes,
     count,

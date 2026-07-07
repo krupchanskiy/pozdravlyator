@@ -4,8 +4,13 @@ import type { Category, Contact } from "../lib/types";
 import { RELATIONSHIP_TYPES } from "../lib/types";
 import type { GenTarget } from "../App";
 import { ContactForm } from "./ContactForm";
+import { CategoriesScreen } from "./CategoriesScreen";
 
-type Mode = { kind: "list" } | { kind: "new" } | { kind: "edit"; contact: Contact };
+type Mode =
+  | { kind: "list" }
+  | { kind: "new" }
+  | { kind: "edit"; contact: Contact }
+  | { kind: "categories" };
 
 interface Props {
   onGenerate: (t: GenTarget) => void;
@@ -52,6 +57,10 @@ export function ContactsScreen({ onGenerate }: Props) {
     }
   }
 
+  if (mode.kind === "categories") {
+    return <CategoriesScreen onBack={() => setMode({ kind: "list" })} />;
+  }
+
   if (mode.kind !== "list") {
     return (
       <ContactForm
@@ -71,6 +80,9 @@ export function ContactsScreen({ onGenerate }: Props) {
       <div className="row-between">
         <h1 className="hello">Контакты</h1>
         <div className="example-actions" style={{ marginTop: 0 }}>
+          <button className="btn-secondary small" onClick={() => setMode({ kind: "categories" })}>
+            Категории
+          </button>
           <button className="btn-secondary small" onClick={importGoogle}>
             Импорт из Google
           </button>

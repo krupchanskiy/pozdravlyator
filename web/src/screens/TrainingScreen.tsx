@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
+  analyzeWishVectors,
   completeTrainingSession,
   finalizeGeneration,
   generateGreeting,
@@ -180,6 +181,7 @@ export function TrainingScreen() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [index, setIndex] = useState(0);
   const [summary, setSummary] = useState<TrainingSummary | null>(null);
+  const [suggestionsCreated, setSuggestionsCreated] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   async function pick() {
@@ -221,6 +223,8 @@ export function TrainingScreen() {
       try {
         await completeTrainingSession(sessionId);
         setSummary(await getTrainingSummary(sessionId));
+        // Анализ вектора пожеланий по затронутым категориям (раздел 6a).
+        setSuggestionsCreated(await analyzeWishVectors(sessionId));
       } catch (e) {
         setError(e instanceof Error ? e.message : "Ошибка завершения");
       }
@@ -276,6 +280,12 @@ export function TrainingScreen() {
             </>
           )}
         </section>
+        {suggestionsCreated > 0 && (
+          <p className="warn mt8">
+            Появились новые предложения по векторам групп ({suggestionsCreated}) — посмотрите в
+            «Контакты → Категории».
+          </p>
+        )}
         <button className="btn-primary mt8" onClick={reset}>
           Готово
         </button>

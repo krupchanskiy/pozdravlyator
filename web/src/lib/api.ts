@@ -11,6 +11,7 @@ import type {
   StyleSettingsInput,
   TrainingSummary,
   UpcomingEvent,
+  WishSuggestion,
 } from "./types";
 
 // --- Профиль пользователя ---
@@ -37,7 +38,7 @@ export async function updateTimezone(timezone: string): Promise<void> {
 export async function listCategories(): Promise<Category[]> {
   const { data, error } = await supabase
     .from("pzd_contact_categories")
-    .select("id, user_id, name")
+    .select("id, user_id, name, wish_vector")
     .order("name");
   if (error) throw error;
   return data ?? [];
@@ -50,10 +51,75 @@ export async function createCategory(name: string): Promise<Category> {
   const { data, error } = await supabase
     .from("pzd_contact_categories")
     .insert({ user_id: uid, name })
-    .select("id, user_id, name")
+    .select("id, user_id, name, wish_vector")
     .single();
   if (error) throw error;
   return data;
+}
+
+// --- Групповой вектор пожеланий (раздел 6a) ---
+
+export async function updateCategoryWishVector(categoryId: string, wishVector: string): Promise<void> {
+  const { error } = await supabase
+    .from("pzd_contact_categories")
+    .update({ wish_vector: wishVector.trim() || null })
+    .eq("id", categoryId);
+  if (error) throw error;
+}
+
+export async function listWishSuggestions(): Promise<WishSuggestion[]> {
+  const { data, error } = await supabase
+    .from("pzd_wish_vector_suggestions")
+    .select("id, category_id, suggested_text, status, created_at, pzd_contact_categories(name)")
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((s) => ({
+    id: s.id as string,
+    category_id: s.category_id as string,
+    category_name:
+      (s.pzd_contact_categories as { name?: string } | null)?.name ?? "категория",
+    suggested_text: s.suggested_text as string,
+    status: s.status as WishSuggestion["status"],
+    created_at: s.created_at as string,
+  }));
+}
+
+// Принять / отредактировать-принять / отклонить предложение.
+export async function resolveWishSuggestion(
+  suggestion: WishSuggestion,
+  action: "accept" | "edit" | "reject",
+  editedText?: string,
+): Promise<void> {
+  const nowIso = new Date().toISOString();
+  if (action === "reject") {
+    const { error } = await supabase
+      .from("pzd_wish_vector_suggestions")
+      .update({ status: "rejected", resolved_at: nowIso })
+      .eq("id", suggestion.id);
+    if (error) throw error;
+    return;
+  }
+  // accept / edit → обновляем вектор категории.
+  const vector = action === "edit" ? (editedText ?? "").trim() : suggestion.suggested_text;
+  const { error: catErr } = await supabase
+    .from("pzd_contact_categories")
+    .update({ wish_vector: vector })
+    .eq("id", suggestion.category_id);
+  if (catErr) throw catErr;
+  const { error } = await supabase
+    .from("pzd_wish_vector_suggestions")
+    .update({ status: action === "edit" ? "edited" : "accepted", resolved_at: nowIso })
+    .eq("id", suggestion.id);
+  if (error) throw error;
+}
+
+export async function analyzeWishVectors(trainingSessionId?: string): Promise<number> {
+  const { data, error } = await supabase.functions.invoke("wish-vector-analyze", {
+    body: trainingSessionId ? { training_session_id: trainingSessionId } : {},
+  });
+  if (error) return 0;
+  return (data?.created as number) ?? 0;
 }
 
 // --- Контакты ---
