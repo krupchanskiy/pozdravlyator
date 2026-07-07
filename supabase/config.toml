@@ -5,3 +5,11 @@ project_id = "intcymsjpbkyrflfcwzf"
 # подпись Telegram, поэтому проверку пользовательского JWT отключаем.
 [functions.telegram-auth]
 verify_jwt = false
+
+# Крон-рассылка напоминаний — защищена секретным заголовком x-cron-secret.
+[functions.pzd-reminders]
+verify_jwt = false
+
+# Telegram-вебхук — защищён секретным заголовком, Telegram не шлёт JWT.
+[functions.pzd-bot]
+verify_jwt = false
