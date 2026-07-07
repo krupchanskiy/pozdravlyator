@@ -8,11 +8,12 @@ import { TimezoneGate } from "./screens/TimezoneGate";
 import { MainScreen } from "./screens/MainScreen";
 import { ContactsScreen } from "./screens/ContactsScreen";
 import { StyleScreen } from "./screens/StyleScreen";
+import { TrainingScreen } from "./screens/TrainingScreen";
 import { GenerateScreen } from "./screens/GenerateScreen";
 import type { EventType } from "./lib/types";
 import "./App.css";
 
-type Tab = "events" | "contacts" | "style";
+type Tab = "events" | "contacts" | "style" | "training";
 
 export interface GenTarget {
   contactId: string;
@@ -99,6 +100,9 @@ export default function App() {
         <button className={tab === "style" ? "tab active" : "tab"} onClick={() => setTab("style")}>
           Стиль
         </button>
+        <button className={tab === "training" ? "tab active" : "tab"} onClick={() => setTab("training")}>
+          Тренировка
+        </button>
       </nav>
 
       <main className="content">
@@ -111,6 +115,7 @@ export default function App() {
         )}
         {tab === "contacts" && <ContactsScreen onGenerate={setGen} />}
         {tab === "style" && <StyleScreen />}
+        {tab === "training" && <TrainingScreen />}
       </main>
     </div>
   );

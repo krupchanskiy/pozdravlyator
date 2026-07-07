@@ -9,6 +9,7 @@ import type {
   StyleLabel,
   StyleSettings,
   StyleSettingsInput,
+  TrainingSummary,
   UpcomingEvent,
 } from "./types";
 
@@ -223,13 +224,27 @@ export type GenerateResult =
   | { ok: true; variants: string[]; warning: string | null; generationId: string | null }
   | { ok: false; message: string; retriable: boolean };
 
+export interface GenerateOptions {
+  count?: number; // 1 для тренировки, 3 в боевом режиме
+  source?: "user_initiated" | "training";
+  trainingSessionId?: string | null;
+}
+
 export async function generateGreeting(
   contactId: string,
   eventType: EventType,
   userWishes: string | null,
+  opts: GenerateOptions = {},
 ): Promise<GenerateResult> {
   const { data, error } = await supabase.functions.invoke("generate", {
-    body: { contact_id: contactId, event_type: eventType, user_wishes: userWishes },
+    body: {
+      contact_id: contactId,
+      event_type: eventType,
+      user_wishes: userWishes,
+      count: opts.count,
+      source: opts.source,
+      training_session_id: opts.trainingSessionId ?? null,
+    },
   });
   if (error) {
     // Платформенная/сетевая ошибка (не наш обработанный кейс).
@@ -276,4 +291,63 @@ export async function finalizeGeneration(
     .update({ final_text: finalText, final_variant_index: variantIndex })
     .eq("id", generationId);
   if (error) throw error;
+}
+
+// --- Тренировка (раздел 5a) ---
+
+export async function startTrainingSession(
+  eventType: EventType,
+  contactIds: string[],
+): Promise<string> {
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth.user?.id;
+  if (!uid) throw new Error("Нет сессии");
+  const { data, error } = await supabase
+    .from("pzd_training_sessions")
+    .insert({ user_id: uid, event_type: eventType, contact_ids: contactIds })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id as string;
+}
+
+export async function completeTrainingSession(sessionId: string): Promise<void> {
+  const { error } = await supabase
+    .from("pzd_training_sessions")
+    .update({ completed_at: new Date().toISOString() })
+    .eq("id", sessionId);
+  if (error) throw error;
+}
+
+export async function getTrainingSummary(sessionId: string): Promise<TrainingSummary> {
+  const { data, error } = await supabase
+    .from("pzd_generations")
+    .select("variants, final_text")
+    .eq("training_session_id", sessionId);
+  if (error) throw error;
+
+  let good = 0;
+  let bad = 0;
+  let edited = 0;
+  const reasonCounts = new Map<string, number>();
+
+  for (const g of data ?? []) {
+    const variants = (g.variants ?? []) as { text: string; feedback?: string; bad_reason?: string }[];
+    const v = variants[0];
+    if (v?.feedback === "good") good++;
+    if (v?.feedback === "bad") {
+      bad++;
+      // Базовая причина — текст до двоеточия (без комментария).
+      const base = (v.bad_reason ?? "").split(":")[0].trim();
+      if (base) reasonCounts.set(base, (reasonCounts.get(base) ?? 0) + 1);
+    }
+    const finalText = g.final_text as string | null;
+    if (finalText && v && finalText.trim() !== v.text.trim()) edited++;
+  }
+
+  const reasons = [...reasonCounts.entries()]
+    .map(([reason, count]) => ({ reason, count }))
+    .sort((a, b) => b.count - a.count);
+
+  return { total: (data ?? []).length, good, bad, edited, reasons };
 }

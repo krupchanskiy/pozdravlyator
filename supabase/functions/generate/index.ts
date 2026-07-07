@@ -66,7 +66,9 @@ function buildPrompt(
   editPairs: { before: string; after: string }[],
   eventType: string,
   userWishes: string | null,
+  count: number,
 ) {
+  const nWord = count === 1 ? "1 вариант" : `${count} разных варианта`;
   let refBlock = "";
   if (referenceExamples.length) {
     refBlock =
@@ -92,7 +94,7 @@ function buildPrompt(
     "- Строго соблюдай форму обращения (на «ты» или на «вы»), указанную в контексте.\n" +
     "- Не выдумывай факты, которых нет в контексте. Если фактов мало — пиши искренне, но без конкретики.\n" +
     "- Подражай стилю пользователя по эталонным примерам и настройкам, но не копируй примеры дословно.\n" +
-    "- Верни РОВНО 3 разных варианта поздравления.\n\n" +
+    `- Верни РОВНО ${nWord} поздравления.\n\n` +
     `Стиль пользователя: ${styleDescription(settings)}.` +
     refBlock +
     editBlock;
@@ -111,7 +113,7 @@ function buildPrompt(
     `- Факты о человеке: ${(contact.context_notes as string)?.trim() || "фактов нет"}\n\n` +
     `Событие: ${eventLabel}${anniv}\n` +
     `Пожелания пользователя к тексту: ${userWishes?.trim() || "нет"}\n\n` +
-    "Напиши 3 варианта поздравления.";
+    `Напиши ${nWord} поздравления.`;
 
   return { system, user };
 }
@@ -151,6 +153,12 @@ Deno.serve(async (req) => {
   const contactId = payload.contact_id as string;
   const eventType = (payload.event_type as string) ?? "birthday";
   const userWishes = (payload.user_wishes as string) ?? null;
+  // Тренировка (раздел 5a): 1 вариант, source='training', привязка к сессии.
+  const count = Math.min(3, Math.max(1, Number(payload.count) || 3));
+  const source = ["user_initiated", "reminder_bot", "training"].includes(payload.source as string)
+    ? (payload.source as string)
+    : "user_initiated";
+  const trainingSessionId = (payload.training_session_id as string) ?? null;
   if (!contactId) return json({ error: "bad_request", message: "Не указан contact_id" }, 400);
 
   const authHeader = req.headers.get("Authorization") ?? "";
@@ -220,6 +228,7 @@ Deno.serve(async (req) => {
     editPairs,
     eventType,
     userWishes,
+    count,
   );
 
   // Предупреждение о нехватке данных (раздел 9 ТЗ).
@@ -305,7 +314,7 @@ Deno.serve(async (req) => {
   let variants: string[] = [];
   try {
     const parsed = JSON.parse(textBlock?.text ?? "{}");
-    variants = Array.isArray(parsed.variants) ? parsed.variants.slice(0, 3) : [];
+    variants = Array.isArray(parsed.variants) ? parsed.variants.slice(0, count) : [];
   } catch {
     console.error("Не удалось распарсить ответ Claude:", textBlock?.text);
   }
@@ -323,7 +332,8 @@ Deno.serve(async (req) => {
       event_type: eventType,
       user_wishes: userWishes,
       variants: variantsJson,
-      source: "user_initiated",
+      source,
+      training_session_id: trainingSessionId,
     })
     .select("id")
     .single();

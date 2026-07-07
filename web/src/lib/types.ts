@@ -87,3 +87,22 @@ export interface StyleSettings {
 }
 
 export type StyleSettingsInput = Omit<StyleSettings, "user_id">;
+
+// --- Тренировка (раздел 5a) ---
+
+export interface TrainingSession {
+  id: string;
+  user_id: string;
+  event_type: EventType;
+  contact_ids: string[];
+  started_at: string;
+  completed_at: string | null;
+}
+
+export interface TrainingSummary {
+  total: number;
+  good: number;
+  bad: number;
+  edited: number;
+  reasons: { reason: string; count: number }[];
+}
