@@ -22,7 +22,17 @@ export function ContactsScreen({ onGenerate }: Props) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [catFilter, setCatFilter] = useState<Set<string>>(new Set());
   const [relFilter, setRelFilter] = useState("");
+  const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  // Быстрый поиск по имени/«как называть» — фильтрация на клиенте.
+  const query = search.trim().toLowerCase();
+  const visibleContacts = (contacts ?? []).filter(
+    (c) =>
+      !query ||
+      c.name.toLowerCase().includes(query) ||
+      (c.call_name ?? "").toLowerCase().includes(query),
+  );
 
   async function reload() {
     setError(null);
@@ -102,6 +112,14 @@ export function ContactsScreen({ onGenerate }: Props) {
         </div>
       </div>
 
+      <input
+        className="input search-input"
+        type="search"
+        placeholder="Поиск по имени"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+
       <div className="filters">
         <select className="input" value={relFilter} onChange={(e) => setRelFilter(e.target.value)}>
           <option value="">Все типы отношений</option>
@@ -138,9 +156,13 @@ export function ContactsScreen({ onGenerate }: Props) {
         <p className="muted empty">Контактов пока нет. Нажмите «Добавить».</p>
       )}
 
-      {contacts && contacts.length > 0 && (
+      {contacts && contacts.length > 0 && visibleContacts.length === 0 && (
+        <p className="muted empty">Никого не нашлось по запросу «{search.trim()}».</p>
+      )}
+
+      {visibleContacts.length > 0 && (
         <ul className="contact-list">
-          {contacts.map((c) => (
+          {visibleContacts.map((c) => (
             <li key={c.id} className="contact-row">
               <div onClick={() => setMode({ kind: "edit", contact: c })}>
                 <div className="contact-name">

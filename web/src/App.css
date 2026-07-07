@@ -219,6 +219,11 @@ button:disabled {
   gap: 8px;
 }
 
+/* Поиск по имени над фильтрами */
+.search-input {
+  margin-bottom: 10px;
+}
+
 /* --- Фильтры --- */
 .filters {
   display: flex;
