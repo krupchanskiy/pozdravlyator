@@ -1,6 +1,6 @@
 export type AddressForm = "ты" | "вы";
 export type Gender = "male" | "female";
-export type ContactSource = "manual" | "google_contacts";
+export type ContactSource = "manual" | "google_contacts" | "telegram_bot";
 
 export interface Contact {
   id: string;
