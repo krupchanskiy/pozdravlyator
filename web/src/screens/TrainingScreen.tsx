@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   analyzeWishVectors,
+  appendContactFact,
   completeTrainingSession,
   finalizeGeneration,
   generateGreeting,
@@ -33,7 +34,16 @@ function RepStep({
   total: number;
   onNext: () => void;
 }) {
-  const [loading, setLoading] = useState(true);
+  // Пустая карточка → сначала спрашиваем пару фактов о человеке (иначе
+  // генерация выйдет общей и оценивать будет нечего). Ответ сохраняется
+  // в карточку контакта — тренировка попутно наполняет базу.
+  const [phase, setPhase] = useState<"facts" | "gen">(
+    rep.contact.context_notes?.trim() ? "gen" : "facts",
+  );
+  const [factsText, setFactsText] = useState("");
+  const [savingFacts, setSavingFacts] = useState(false);
+
+  const [loading, setLoading] = useState(false);
   const [variant, setVariant] = useState<string | null>(null);
   const [generationId, setGenerationId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +55,7 @@ function RepStep({
   const didRun = useRef(false);
 
   useEffect(() => {
+    if (phase !== "gen") return;
     if (didRun.current) return; // защита от двойного вызова в StrictMode
     didRun.current = true;
     (async () => {
@@ -63,7 +74,22 @@ function RepStep({
         setError(res.message);
       }
     })();
-  }, [rep.contact.id, eventType, sessionId]);
+  }, [phase, rep.contact.id, eventType, sessionId]);
+
+  async function saveFactsAndGenerate() {
+    const text = factsText.trim();
+    if (!text) return;
+    setSavingFacts(true);
+    setError(null);
+    try {
+      // Сохраняем в карточку ДО генерации — edge-функция читает контакт из БД.
+      await appendContactFact(rep.contact.id, text);
+      setPhase("gen");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Не удалось сохранить факты");
+      setSavingFacts(false);
+    }
+  }
 
   async function good() {
     if (generationId) await submitFeedback(generationId, 0, "good", null);
@@ -91,6 +117,34 @@ function RepStep({
       <p className="muted" style={{ marginTop: -12 }}>
         {rep.groupLabel}
       </p>
+
+      {phase === "facts" && (
+        <div className="example-row">
+          <p className="muted" style={{ margin: 0 }}>
+            В карточке пока пусто. Пара слов о человеке — чем живёт, что у вас общего?
+            Сохранится в карточку, и поздравление получится конкретным, а не «здоровья и счастья».
+          </p>
+          <textarea
+            className="input"
+            rows={3}
+            placeholder="напр. коллега с прошлой работы, увлекается горами, недавно родилась дочка"
+            value={factsText}
+            onChange={(e) => setFactsText(e.target.value)}
+          />
+          <div className="example-actions">
+            <button
+              className="btn-primary"
+              onClick={saveFactsAndGenerate}
+              disabled={!factsText.trim() || savingFacts}
+            >
+              {savingFacts ? "Сохраняем…" : "Сохранить и сгенерировать"}
+            </button>
+            <button className="btn-secondary" onClick={() => setPhase("gen")} disabled={savingFacts}>
+              Без фактов
+            </button>
+          </div>
+        </div>
+      )}
 
       {loading && <p className="muted">Генерируем вариант…</p>}
       {error && <p className="error">{error}</p>}
@@ -348,8 +402,9 @@ export function TrainingScreen() {
     <>
       <h1 className="hello">Тренировка стиля</h1>
       <p className="muted empty">
-        Система подберёт по одному контакту на каждый тип отношений и обращение, сгенерирует по
-        одному поздравлению — оцените или поправьте, чтобы обучить свой стиль.
+        Система подберёт по одному контакту на каждый тип отношений и обращение. Если карточка
+        пустая — сначала спросим пару фактов о человеке (они сохранятся в карточку), потом
+        сгенерируем поздравление — оцените или поправьте, чтобы обучить свой стиль.
       </p>
 
       <label className="field mt8">
