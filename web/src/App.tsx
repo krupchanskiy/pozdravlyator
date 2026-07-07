@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./lib/supabase";
-import { getProfile } from "./lib/api";
+import { getProfile, googleImportRun } from "./lib/api";
 import type { Profile } from "./lib/types";
 import { TelegramLogin } from "./components/TelegramLogin";
 import { TimezoneGate } from "./screens/TimezoneGate";
@@ -27,6 +27,8 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("events");
   const [gen, setGen] = useState<GenTarget | null>(null);
+  const [importMsg, setImportMsg] = useState<string | null>(null);
+  const importHandled = useRef(false);
 
   const loadProfile = useCallback(async () => {
     try {
@@ -49,6 +51,26 @@ export default function App() {
     });
     return () => sub.subscription.unsubscribe();
   }, [loadProfile]);
+
+  // Возврат из Google OAuth: ?code=... → обмениваем на контакты.
+  useEffect(() => {
+    if (!session || importHandled.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    if (!code) return;
+    importHandled.current = true;
+    const redirect = window.location.origin + import.meta.env.BASE_URL;
+    googleImportRun(code, redirect).then((res) => {
+      // Убираем ?code из URL, чтобы код не переиспользовался при перезагрузке.
+      window.history.replaceState({}, "", import.meta.env.BASE_URL);
+      setTab("contacts");
+      setImportMsg(
+        "imported" in res
+          ? `Импортировано из Google: ${res.imported}`
+          : `Ошибка импорта: ${res.error}`,
+      );
+    });
+  }, [session]);
 
   if (loading) return <div className="screen center muted">Загрузка…</div>;
 
@@ -104,6 +126,12 @@ export default function App() {
           Тренировка
         </button>
       </nav>
+
+      {importMsg && (
+        <div className="import-banner" onClick={() => setImportMsg(null)}>
+          {importMsg} <span className="muted">(нажмите, чтобы скрыть)</span>
+        </div>
+      )}
 
       <main className="content">
         {tab === "events" && (

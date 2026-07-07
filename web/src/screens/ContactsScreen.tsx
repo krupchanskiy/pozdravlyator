@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { listCategories, listContacts } from "../lib/api";
+import { googleImportInit, listCategories, listContacts } from "../lib/api";
 import type { Category, Contact } from "../lib/types";
 import { RELATIONSHIP_TYPES } from "../lib/types";
 import type { GenTarget } from "../App";
@@ -41,6 +41,17 @@ export function ContactsScreen({ onGenerate }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [catFilter, relFilter]);
 
+  async function importGoogle() {
+    setError(null);
+    try {
+      const redirect = window.location.origin + import.meta.env.BASE_URL;
+      const url = await googleImportInit(redirect);
+      window.location.href = url; // уходим на согласие Google
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Не удалось начать импорт");
+    }
+  }
+
   if (mode.kind !== "list") {
     return (
       <ContactForm
@@ -59,9 +70,14 @@ export function ContactsScreen({ onGenerate }: Props) {
     <>
       <div className="row-between">
         <h1 className="hello">Контакты</h1>
-        <button className="btn-primary small" onClick={() => setMode({ kind: "new" })}>
-          + Добавить
-        </button>
+        <div className="example-actions" style={{ marginTop: 0 }}>
+          <button className="btn-secondary small" onClick={importGoogle}>
+            Импорт из Google
+          </button>
+          <button className="btn-primary small" onClick={() => setMode({ kind: "new" })}>
+            + Добавить
+          </button>
+        </div>
       </div>
 
       <div className="filters">

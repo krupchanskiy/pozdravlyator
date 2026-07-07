@@ -293,6 +293,29 @@ export async function finalizeGeneration(
   if (error) throw error;
 }
 
+// --- Импорт из Google Contacts (/api/contacts/import/google) ---
+
+export async function googleImportInit(redirectUri: string): Promise<string> {
+  const { data, error } = await supabase.functions.invoke("google-contacts-import", {
+    body: { action: "init", redirect_uri: redirectUri },
+  });
+  if (error) throw new Error("Ошибка связи с сервером");
+  if (data?.error) throw new Error(data.message ?? data.error);
+  return data.auth_url as string;
+}
+
+export async function googleImportRun(
+  code: string,
+  redirectUri: string,
+): Promise<{ imported: number } | { error: string }> {
+  const { data, error } = await supabase.functions.invoke("google-contacts-import", {
+    body: { action: "import", code, redirect_uri: redirectUri },
+  });
+  if (error) return { error: "Ошибка связи с сервером" };
+  if (data?.error) return { error: data.message ?? data.error };
+  return { imported: data.imported as number };
+}
+
 // --- Тренировка (раздел 5a) ---
 
 export async function startTrainingSession(
