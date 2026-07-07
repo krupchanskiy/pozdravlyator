@@ -434,6 +434,13 @@ export interface GenerationHistoryItem {
   created_at: string;
 }
 
+// Показываем только генерации хотя бы с одним 👍-вариантом — оценка ставится
+// уже после генерации, поэтому фильтруем на чтении (это же автоматически
+// «не добавляет» неотмеченные и плохие в историю и для будущих генераций).
+function hasGoodVariant(item: GenerationHistoryItem): boolean {
+  return item.variants.some((v) => v.feedback === "good");
+}
+
 export async function listContactGenerations(contactId: string): Promise<GenerationHistoryItem[]> {
   const { data, error } = await supabase
     .from("pzd_generations")
@@ -441,7 +448,7 @@ export async function listContactGenerations(contactId: string): Promise<Generat
     .eq("contact_id", contactId)
     .order("created_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []) as GenerationHistoryItem[];
+  return ((data ?? []) as GenerationHistoryItem[]).filter(hasGoodVariant);
 }
 
 // POST /api/generate/:id/finalize — итоговый (отредактированный) текст.
