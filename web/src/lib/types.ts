@@ -65,6 +65,8 @@ export interface Profile {
   first_name: string | null;
   timezone: string | null;
   reminder_time: string;
+  reminder_enabled: boolean;
+  remind_mandatory_only: boolean;
 }
 
 // Стандартные типы отношений (relationship_type — свободный текст, это лишь подсказки).

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import {
   analyzeWishVectors,
+  createCategory,
+  deleteCategory,
   listCategories,
   listWishSuggestions,
   resolveWishSuggestion,
@@ -12,10 +14,11 @@ interface Props {
   onBack: () => void;
 }
 
-// Строка категории с редактируемым вектором пожеланий.
-function CategoryRow({ cat }: { cat: Category }) {
+// Строка категории с редактируемым вектором пожеланий и удалением.
+function CategoryRow({ cat, onDeleted }: { cat: Category; onDeleted: () => void }) {
   const [text, setText] = useState(cat.wish_vector ?? "");
   const [status, setStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   async function save() {
     try {
@@ -27,10 +30,27 @@ function CategoryRow({ cat }: { cat: Category }) {
     }
   }
 
+  async function remove() {
+    if (!confirm(`Удалить категорию «${cat.name}»? Контакты останутся, привязка к группе исчезнет.`)) return;
+    setBusy(true);
+    try {
+      await deleteCategory(cat.id);
+      onDeleted();
+    } catch {
+      setStatus("Ошибка удаления");
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="card">
-      <div className="card-title">{cat.name}</div>
-      <label className="field">
+      <div className="row-between">
+        <div className="card-title" style={{ marginBottom: 0 }}>{cat.name}</div>
+        <button className="link-btn danger" onClick={remove} disabled={busy}>
+          Удалить
+        </button>
+      </div>
+      <label className="field" style={{ marginTop: 10 }}>
         <span>Общее пожелание для этой группы</span>
         <textarea
           className="input"
@@ -110,6 +130,20 @@ export function CategoriesScreen({ onBack }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeMsg, setAnalyzeMsg] = useState<string | null>(null);
+  const [newName, setNewName] = useState("");
+
+  async function addCategory() {
+    const name = newName.trim();
+    if (!name) return;
+    setError(null);
+    try {
+      await createCategory(name);
+      setNewName("");
+      await reload();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Не удалось создать категорию");
+    }
+  }
 
   async function reload() {
     setError(null);
@@ -151,6 +185,24 @@ export function CategoriesScreen({ onBack }: Props) {
 
       {error && <p className="error">{error}</p>}
 
+      <div className="cat-add">
+        <input
+          className="input"
+          placeholder="Новая категория"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addCategory();
+            }
+          }}
+        />
+        <button className="btn-primary" type="button" onClick={addCategory}>
+          Создать
+        </button>
+      </div>
+
       <button className="btn-secondary" onClick={checkSuggestions} disabled={analyzing}>
         {analyzing ? "Анализируем…" : "Проверить предложения"}
       </button>
@@ -168,9 +220,9 @@ export function CategoriesScreen({ onBack }: Props) {
       )}
 
       {cats.length === 0 ? (
-        <p className="muted empty">Категорий пока нет. Создайте их в карточке контакта.</p>
+        <p className="muted empty">Категорий пока нет. Создайте первую в поле выше.</p>
       ) : (
-        cats.map((c) => <CategoryRow key={c.id} cat={c} />)
+        cats.map((c) => <CategoryRow key={c.id} cat={c} onDeleted={reload} />)
       )}
     </div>
   );

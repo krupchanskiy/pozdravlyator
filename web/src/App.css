@@ -68,6 +68,17 @@
   padding: 4px 6px;
 }
 
+.header-btns {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.link-btn.icon-btn {
+  display: flex;
+  align-items: center;
+}
+
 .content {
   padding: 20px;
   flex-grow: 1;
@@ -481,6 +492,13 @@ button:disabled {
 
 .btn-secondary.small {
   padding: 8px 12px;
+}
+
+/* --- Экран «Настройки» --- */
+.settings-hint {
+  font-size: 13px;
+  line-height: 1.45;
+  margin: 0;
 }
 
 .import-banner {

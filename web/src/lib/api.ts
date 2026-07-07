@@ -20,7 +20,9 @@ import type {
 export async function getProfile(): Promise<Profile | null> {
   const { data, error } = await supabase
     .from("pzd_users")
-    .select("id, telegram_user_id, telegram_username, first_name, timezone, reminder_time")
+    .select(
+      "id, telegram_user_id, telegram_username, first_name, timezone, reminder_time, reminder_enabled, remind_mandatory_only",
+    )
     .maybeSingle();
   if (error) throw error;
   return data;
@@ -31,6 +33,22 @@ export async function updateTimezone(timezone: string): Promise<void> {
   const uid = auth.user?.id;
   if (!uid) throw new Error("Нет сессии");
   const { error } = await supabase.from("pzd_users").update({ timezone }).eq("id", uid);
+  if (error) throw error;
+}
+
+// Настройки напоминаний + часовой пояс (раздел 10).
+export interface UserSettingsInput {
+  timezone: string;
+  reminder_time: string; // HH:MM
+  reminder_enabled: boolean;
+  remind_mandatory_only: boolean;
+}
+
+export async function updateUserSettings(input: UserSettingsInput): Promise<void> {
+  const { data: auth } = await supabase.auth.getUser();
+  const uid = auth.user?.id;
+  if (!uid) throw new Error("Нет сессии");
+  const { error } = await supabase.from("pzd_users").update(input).eq("id", uid);
   if (error) throw error;
 }
 
@@ -56,6 +74,13 @@ export async function createCategory(name: string): Promise<Category> {
     .single();
   if (error) throw error;
   return data;
+}
+
+// Удаление категории: связи с контактами и предложения вектора уходят каскадом,
+// сами контакты не трогаются.
+export async function deleteCategory(id: string): Promise<void> {
+  const { error } = await supabase.from("pzd_contact_categories").delete().eq("id", id);
+  if (error) throw error;
 }
 
 // --- Групповой вектор пожеланий (раздел 6a) ---
