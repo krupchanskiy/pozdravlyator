@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { finalizeGeneration, generateGreeting, submitFeedback } from "../lib/api";
+import { appendContactFact, finalizeGeneration, generateGreeting, submitFeedback } from "../lib/api";
 import type { EventType } from "../lib/types";
 import { BAD_REASONS, EVENT_LABELS } from "../lib/format";
 
@@ -161,21 +161,37 @@ export function GenerateScreen({ contactId, contactName, initialEventType, onBac
   const [warning, setWarning] = useState<string | null>(null);
   const [variants, setVariants] = useState<string[] | null>(null);
   const [generationId, setGenerationId] = useState<string | null>(null);
+  // Долговечные факты из пожеланий: предложение дописать в карточку (раздел 6a-подход:
+  // никаких молчаливых изменений — только с подтверждением).
+  const [facts, setFacts] = useState<string[]>([]);
+  const [factStatus, setFactStatus] = useState<Record<string, "added" | "dismissed" | "error">>({});
 
   async function generate() {
     setLoading(true);
     setError(null);
     setWarning(null);
     setVariants(null);
+    setFacts([]);
+    setFactStatus({});
     const res = await generateGreeting(contactId, eventType, wishes.trim() || null);
     setLoading(false);
     if (res.ok) {
       setVariants(res.variants);
       setWarning(res.warning);
       setGenerationId(res.generationId);
+      setFacts(res.suggestedFacts);
     } else {
       // Пожелания пользователя НЕ теряем — они остаются в поле.
       setError(res.message);
+    }
+  }
+
+  async function addFact(fact: string) {
+    try {
+      await appendContactFact(contactId, fact);
+      setFactStatus((s) => ({ ...s, [fact]: "added" }));
+    } catch {
+      setFactStatus((s) => ({ ...s, [fact]: "error" }));
     }
   }
 
@@ -237,6 +253,35 @@ export function GenerateScreen({ contactId, contactName, initialEventType, onBac
               Повторить
             </button>
           </div>
+        )}
+
+        {variants && facts.length > 0 && (
+          <section className="card">
+            <h2 className="card-title">💡 Запомнить в карточке {contactName}?</h2>
+            <ul className="summary-list">
+              {facts.map((f) => (
+                <li key={f} className="fact-row">
+                  <span className="fact-text">«{f}»</span>
+                  {factStatus[f] === "added" && <span className="muted">Добавлено ✓</span>}
+                  {factStatus[f] === "dismissed" && <span className="muted">Пропущено</span>}
+                  {factStatus[f] === "error" && <span className="error">Ошибка сохранения</span>}
+                  {!factStatus[f] && (
+                    <span className="example-actions" style={{ marginTop: 0 }}>
+                      <button className="btn-primary small" onClick={() => addFact(f)}>
+                        Добавить
+                      </button>
+                      <button
+                        className="btn-secondary small"
+                        onClick={() => setFactStatus((s) => ({ ...s, [f]: "dismissed" }))}
+                      >
+                        Не надо
+                      </button>
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
 
         {variants && (

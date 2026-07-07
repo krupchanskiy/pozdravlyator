@@ -321,7 +321,13 @@ export async function saveStyleSettings(input: StyleSettingsInput): Promise<void
 // --- Генерация поздравлений (/api/generate) ---
 
 export type GenerateResult =
-  | { ok: true; variants: string[]; warning: string | null; generationId: string | null }
+  | {
+      ok: true;
+      variants: string[];
+      warning: string | null;
+      generationId: string | null;
+      suggestedFacts: string[]; // долговечные факты из пожеланий — предложить в карточку
+    }
   | { ok: false; message: string; retriable: boolean };
 
 export interface GenerateOptions {
@@ -353,7 +359,30 @@ export async function generateGreeting(
   if (data?.error) {
     return { ok: false, message: data.message ?? "Ошибка генерации", retriable: Boolean(data.retriable) };
   }
-  return { ok: true, variants: data.variants, warning: data.warning, generationId: data.generation_id };
+  return {
+    ok: true,
+    variants: data.variants,
+    warning: data.warning,
+    generationId: data.generation_id,
+    suggestedFacts: Array.isArray(data.suggested_facts) ? data.suggested_facts : [],
+  };
+}
+
+// Дозапись подтверждённого факта в заметки контакта (с новой строки).
+export async function appendContactFact(contactId: string, fact: string): Promise<void> {
+  const { data, error } = await supabase
+    .from("pzd_contacts")
+    .select("context_notes")
+    .eq("id", contactId)
+    .single();
+  if (error) throw error;
+  const cur = (data.context_notes as string | null)?.trim();
+  const next = cur ? `${cur}\n${fact}` : fact;
+  const { error: e2 } = await supabase
+    .from("pzd_contacts")
+    .update({ context_notes: next })
+    .eq("id", contactId);
+  if (e2) throw e2;
 }
 
 // POST /api/generate/:id/feedback — 👍/👎 + причина по конкретному варианту.

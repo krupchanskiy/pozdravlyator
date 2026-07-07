@@ -96,7 +96,11 @@ function buildPrompt(
     "- Если указано «как называть» — обращайся в тексте именно так (даже на «вы» можно называть по короткому имени).\n" +
     "- Не выдумывай факты, которых нет в контексте. Если фактов мало — пиши искренне, но без конкретики.\n" +
     "- Подражай стилю пользователя по эталонным примерам и настройкам, но не копируй примеры дословно.\n" +
-    `- Верни РОВНО ${nWord} поздравления.\n\n` +
+    `- Верни РОВНО ${nWord} поздравления.\n` +
+    "- Отдельным полем durable_facts верни долговечные факты о получателе из «пожеланий " +
+    "пользователя к тексту» (напр. «переехал в Питер», «любит кактусы») — краткими фразами. " +
+    "НЕ включай разовые указания к тексту («покороче», «упомяни вчерашний звонок», «2 абзаца») " +
+    "и факты, уже известные из контекста получателя. Если таких нет — пустой список.\n\n" +
     `Стиль пользователя: ${styleDescription(settings)}.` +
     refBlock +
     editBlock;
@@ -263,8 +267,12 @@ Deno.serve(async (req) => {
         type: "array",
         items: { type: "string", description: "Текст одного варианта поздравления" },
       },
+      durable_facts: {
+        type: "array",
+        items: { type: "string", description: "Долговечный факт о получателе из пожеланий пользователя" },
+      },
     },
-    required: ["variants"],
+    required: ["variants", "durable_facts"],
     additionalProperties: false,
   };
 
@@ -331,9 +339,13 @@ Deno.serve(async (req) => {
   // Достаём JSON-текст из ответа.
   const textBlock = (data.content ?? []).find((b: { type: string }) => b.type === "text");
   let variants: string[] = [];
+  let durableFacts: string[] = [];
   try {
     const parsed = JSON.parse(textBlock?.text ?? "{}");
     variants = Array.isArray(parsed.variants) ? parsed.variants.slice(0, count) : [];
+    durableFacts = Array.isArray(parsed.durable_facts)
+      ? parsed.durable_facts.filter((f: unknown): f is string => typeof f === "string" && !!f.trim())
+      : [];
   } catch {
     console.error("Не удалось распарсить ответ Claude:", textBlock?.text);
   }
@@ -361,7 +373,13 @@ Deno.serve(async (req) => {
     // Генерация удалась — отдаём её даже если запись не легла.
   }
 
-  const result: Record<string, unknown> = { variants, warning, generation_id: gen?.id ?? null };
+  // Факты предлагаем только если пользователь реально писал пожелания.
+  const result: Record<string, unknown> = {
+    variants,
+    warning,
+    generation_id: gen?.id ?? null,
+    suggested_facts: userWishes?.trim() ? durableFacts : [],
+  };
   if (payload._debug) result.debug_prompt = { system, user };
   return json(result);
 });

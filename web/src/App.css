@@ -500,6 +500,22 @@ button:disabled {
   gap: 6px;
 }
 
+/* Плашка «запомнить факт в карточке» после генерации */
+.fact-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.fact-text {
+  flex: 1 1 100%;
+}
+
+.card + .event-list {
+  margin-top: 16px;
+}
+
 .tab {
   font-size: 14px;
   padding: 12px 6px;
