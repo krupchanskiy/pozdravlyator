@@ -9,6 +9,7 @@ import type {
   StyleLabel,
   StyleSettings,
   StyleSettingsInput,
+  TrainingSession,
   TrainingSummary,
   UpcomingEvent,
   WishSuggestion,
@@ -346,6 +347,27 @@ export async function submitFeedback(
   if (e2) throw e2;
 }
 
+// История поздравлений по контакту (для карточки контакта, раздел 11).
+export interface GenerationHistoryItem {
+  id: string;
+  event_type: EventType;
+  variants: { text: string; feedback?: string | null; bad_reason?: string | null }[];
+  final_text: string | null;
+  final_variant_index: number | null;
+  source: string;
+  created_at: string;
+}
+
+export async function listContactGenerations(contactId: string): Promise<GenerationHistoryItem[]> {
+  const { data, error } = await supabase
+    .from("pzd_generations")
+    .select("id, event_type, variants, final_text, final_variant_index, source, created_at")
+    .eq("contact_id", contactId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as GenerationHistoryItem[];
+}
+
 // POST /api/generate/:id/finalize — итоговый (отредактированный) текст.
 export async function finalizeGeneration(
   generationId: string,
@@ -398,6 +420,17 @@ export async function startTrainingSession(
     .single();
   if (error) throw error;
   return data.id as string;
+}
+
+// История завершённых тренировочных сессий (раздел 11).
+export async function listTrainingSessions(): Promise<TrainingSession[]> {
+  const { data, error } = await supabase
+    .from("pzd_training_sessions")
+    .select("*")
+    .not("completed_at", "is", null)
+    .order("completed_at", { ascending: false });
+  if (error) throw error;
+  return (data ?? []) as TrainingSession[];
 }
 
 export async function completeTrainingSession(sessionId: string): Promise<void> {

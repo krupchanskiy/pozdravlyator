@@ -4,10 +4,65 @@ import {
   createContact,
   deleteContact,
   getContactCategoryIds,
+  listContactGenerations,
   updateContact,
 } from "../lib/api";
+import type { GenerationHistoryItem } from "../lib/api";
 import type { Category, Contact, ContactInput } from "../lib/types";
 import { RELATIONSHIP_TYPES } from "../lib/types";
+import { EVENT_LABELS, formatDate } from "../lib/format";
+
+const SOURCE_LABELS: Record<string, string> = {
+  user_initiated: "вручную",
+  reminder_bot: "из бота",
+  training: "тренировка",
+};
+
+// Текст, который в итоге пошёл в дело: финальный → отмеченный «хорошо» → первый.
+function historyText(g: GenerationHistoryItem): string {
+  if (g.final_text) return g.final_text;
+  if (g.final_variant_index != null && g.variants[g.final_variant_index]) {
+    return g.variants[g.final_variant_index].text;
+  }
+  return g.variants.find((v) => v.feedback === "good")?.text ?? g.variants[0]?.text ?? "";
+}
+
+// История поздравлений по контакту (раздел 11).
+function GreetingHistory({ contactId }: { contactId: string }) {
+  const [items, setItems] = useState<GenerationHistoryItem[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    listContactGenerations(contactId)
+      .then(setItems)
+      .catch((e) => setError(e instanceof Error ? e.message : "Ошибка загрузки истории"));
+  }, [contactId]);
+
+  return (
+    <section className="events">
+      <h2 className="card-title">История поздравлений{items ? ` (${items.length})` : ""}</h2>
+      {error && <p className="error">{error}</p>}
+      {items && items.length === 0 && (
+        <p className="muted empty">Поздравлений для этого контакта ещё не было.</p>
+      )}
+      {items && items.length > 0 && (
+        <ul className="event-list">
+          {items.map((g) => (
+            <li key={g.id} className="example-row">
+              <div className="muted" style={{ fontSize: 13 }}>
+                {EVENT_LABELS[g.event_type] ?? g.event_type} • {formatDate(g.created_at)}
+                {" • "}
+                {SOURCE_LABELS[g.source] ?? g.source}
+                {g.final_text && " • отправлено"}
+              </div>
+              <div className="example-text">{historyText(g)}</div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
 
 interface Props {
   contact: Contact | null; // null → создание
@@ -282,6 +337,8 @@ export function ContactForm({ contact, categories, onCancel, onSaved }: Props) {
           </button>
         )}
       </div>
+
+      {contact && <GreetingHistory contactId={contact.id} />}
     </div>
   );
 }

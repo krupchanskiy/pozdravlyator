@@ -77,9 +77,9 @@ export function ContactsScreen({ onGenerate }: Props) {
 
   return (
     <>
-      <div className="row-between">
+      <div className="list-header">
         <h1 className="hello">Контакты</h1>
-        <div className="example-actions" style={{ marginTop: 0 }}>
+        <div className="header-actions">
           <button className="btn-secondary small" onClick={() => setMode({ kind: "categories" })}>
             Категории
           </button>

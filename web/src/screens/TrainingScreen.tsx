@@ -6,13 +6,14 @@ import {
   generateGreeting,
   getTrainingSummary,
   listContacts,
+  listTrainingSessions,
   startTrainingSession,
   submitFeedback,
 } from "../lib/api";
-import type { EventType, TrainingSummary } from "../lib/types";
+import type { EventType, TrainingSession, TrainingSummary } from "../lib/types";
 import { pickRepresentatives, TRAINING_LIMIT } from "../lib/training";
 import type { Representative } from "../lib/training";
-import { BAD_REASONS, EVENT_LABELS } from "../lib/format";
+import { BAD_REASONS, EVENT_LABELS, formatDate } from "../lib/format";
 
 const EVENT_OPTIONS: EventType[] = ["birthday", "new_year", "mar8", "feb23", "anniversary"];
 
@@ -171,6 +172,48 @@ function RepStep({
   );
 }
 
+// --- Строка истории: разворачивается и подгружает summary сессии ---
+function SessionHistoryItem({ session }: { session: TrainingSession }) {
+  const [open, setOpen] = useState(false);
+  const [summary, setSummary] = useState<TrainingSummary | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function toggle() {
+    const next = !open;
+    setOpen(next);
+    if (next && !summary) {
+      setLoading(true);
+      try {
+        setSummary(await getTrainingSummary(session.id));
+      } finally {
+        setLoading(false);
+      }
+    }
+  }
+
+  return (
+    <li className="example-row">
+      <button className="link-btn" style={{ textAlign: "left", padding: 0 }} onClick={toggle}>
+        {open ? "▾" : "▸"} {EVENT_LABELS[session.event_type]} •{" "}
+        {formatDate(session.completed_at ?? session.started_at)} •{" "}
+        {session.contact_ids.length} контакт(ов)
+      </button>
+      {open && loading && <p className="muted">Загружаем итоги…</p>}
+      {open && summary && (
+        <ul className="summary-list">
+          <li>Оценено: <b>{summary.total}</b></li>
+          <li>👍 {summary.good} • 👎 {summary.bad} • правок: {summary.edited}</li>
+          {summary.reasons.length > 0 && (
+            <li className="muted">
+              Причины отказа: {summary.reasons.map((r) => `${r.reason} (${r.count})`).join(", ")}
+            </li>
+          )}
+        </ul>
+      )}
+    </li>
+  );
+}
+
 export function TrainingScreen() {
   const [phase, setPhase] = useState<"setup" | "run" | "summary">("setup");
   const [eventType, setEventType] = useState<EventType>("birthday");
@@ -183,6 +226,13 @@ export function TrainingScreen() {
   const [summary, setSummary] = useState<TrainingSummary | null>(null);
   const [suggestionsCreated, setSuggestionsCreated] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [sessions, setSessions] = useState<TrainingSession[]>([]);
+
+  // История прошлых тренировок — перезагружаем при каждом входе в setup.
+  useEffect(() => {
+    if (phase !== "setup") return;
+    listTrainingSessions().then(setSessions).catch(() => {});
+  }, [phase]);
 
   async function pick() {
     setError(null);
@@ -355,6 +405,17 @@ export function TrainingScreen() {
             </>
           )}
         </div>
+      )}
+
+      {sessions.length > 0 && (
+        <section className="events">
+          <h2 className="card-title">История тренировок ({sessions.length})</h2>
+          <ul className="event-list">
+            {sessions.map((s) => (
+              <SessionHistoryItem key={s.id} session={s} />
+            ))}
+          </ul>
+        </section>
       )}
     </>
   );

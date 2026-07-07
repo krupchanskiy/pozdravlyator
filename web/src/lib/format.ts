@@ -11,6 +11,13 @@ export function formatDayMonth(iso: string): string {
   return `${d} ${MONTHS[m - 1]}`;
 }
 
+// Полный timestamp (created_at/completed_at) → "7 июля 2026". new Date безопасен
+// для timestamptz (не date-only строки).
+export function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+}
+
 // Человеческое "через сколько".
 export function formatDaysUntil(days: number): string {
   if (days === 0) return "сегодня";

@@ -190,6 +190,24 @@ button:disabled {
   gap: 12px;
 }
 
+/* Заголовок списка + кнопки действий: заголовок сверху, кнопки переносятся ниже. */
+.list-header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.list-header .hello {
+  margin: 8px 0 0;
+}
+
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 /* --- Фильтры --- */
 .filters {
   display: flex;
