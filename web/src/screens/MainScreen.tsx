@@ -1,41 +1,69 @@
 import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
+import { getUpcomingEvents } from "../lib/api";
+import type { UpcomingEvent } from "../lib/types";
+import { EVENT_LABELS, formatDayMonth, formatDaysUntil } from "../lib/format";
 
 interface Props {
-  userId: string;
+  firstName: string | null;
+  onGoContacts: () => void;
 }
 
-// Главный экран (этап 1): пока пустой — список ближайших событий появится на этапе 2.
-export function MainScreen({ userId }: Props) {
-  const [firstName, setFirstName] = useState<string | null>(null);
+// Главный экран — список ближайших событий (/api/events/upcoming).
+export function MainScreen({ firstName, onGoContacts }: Props) {
+  const [events, setEvents] = useState<UpcomingEvent[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    supabase
-      .from("pzd_users")
-      .select("first_name")
-      .eq("id", userId)
-      .maybeSingle()
-      .then(({ data }) => setFirstName(data?.first_name ?? null));
-  }, [userId]);
+    getUpcomingEvents(60)
+      .then(setEvents)
+      .catch((e) => setError(e instanceof Error ? e.message : "Ошибка загрузки"));
+  }, []);
 
   return (
-    <div className="screen">
-      <header className="app-header">
-        <span className="app-title">Поздравлятор</span>
-        <button className="link-btn" onClick={() => supabase.auth.signOut()}>
-          Выйти
-        </button>
-      </header>
+    <>
+      <h1 className="hello">Привет{firstName ? `, ${firstName}` : ""}!</h1>
 
-      <main className="content">
-        <h1 className="hello">Привет{firstName ? `, ${firstName}` : ""}!</h1>
+      {error && <p className="error">{error}</p>}
+
+      {events && events.length === 0 && (
         <section className="card">
           <h2 className="card-title">Ближайшие события</h2>
           <p className="muted empty">
-            Пока пусто. Добавьте контакты — и здесь появятся ближайшие дни рождения и праздники.
+            Пока пусто.{" "}
+            <button className="link-btn inline" onClick={onGoContacts}>
+              Добавьте контакты
+            </button>{" "}
+            — и здесь появятся ближайшие дни рождения и праздники.
           </p>
         </section>
-      </main>
-    </div>
+      )}
+
+      {events && events.length > 0 && (
+        <section className="events">
+          <h2 className="card-title">Ближайшие события</h2>
+          <ul className="event-list">
+            {events.map((e) => (
+              <li key={`${e.contact_id}-${e.event_type}`} className="event-row">
+                <div className="event-when">
+                  <span className="event-date">{formatDayMonth(e.next_date)}</span>
+                  <span className="event-rel muted">{formatDaysUntil(e.days_until)}</span>
+                </div>
+                <div className="event-main">
+                  <div className="event-name">
+                    {e.is_mandatory && <span className="star" title="Обязательный">★</span>}
+                    {e.name}
+                  </div>
+                  <div className="event-sub muted">
+                    {EVENT_LABELS[e.event_type]}
+                    {e.relationship_type ? ` • ${e.relationship_type}` : ""}
+                    {e.closeness ? ` • близость ${e.closeness}/5` : ""}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </>
   );
 }
