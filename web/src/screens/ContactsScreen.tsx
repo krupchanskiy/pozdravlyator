@@ -2,11 +2,16 @@ import { useEffect, useState } from "react";
 import { listCategories, listContacts } from "../lib/api";
 import type { Category, Contact } from "../lib/types";
 import { RELATIONSHIP_TYPES } from "../lib/types";
+import type { GenTarget } from "../App";
 import { ContactForm } from "./ContactForm";
 
 type Mode = { kind: "list" } | { kind: "new" } | { kind: "edit"; contact: Contact };
 
-export function ContactsScreen() {
+interface Props {
+  onGenerate: (t: GenTarget) => void;
+}
+
+export function ContactsScreen({ onGenerate }: Props) {
   const [mode, setMode] = useState<Mode>({ kind: "list" });
   const [contacts, setContacts] = useState<Contact[] | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -87,16 +92,26 @@ export function ContactsScreen() {
       {contacts && contacts.length > 0 && (
         <ul className="contact-list">
           {contacts.map((c) => (
-            <li key={c.id} className="contact-row" onClick={() => setMode({ kind: "edit", contact: c })}>
-              <div className="contact-name">
-                {c.is_mandatory && <span className="star">★</span>}
-                {c.name}
+            <li key={c.id} className="contact-row">
+              <div onClick={() => setMode({ kind: "edit", contact: c })}>
+                <div className="contact-name">
+                  {c.is_mandatory && <span className="star">★</span>}
+                  {c.name}
+                </div>
+                <div className="contact-sub muted">
+                  {[c.relationship_type, c.closeness ? `близость ${c.closeness}/5` : null, c.address_form ? `на «${c.address_form}»` : null]
+                    .filter(Boolean)
+                    .join(" • ")}
+                </div>
               </div>
-              <div className="contact-sub muted">
-                {[c.relationship_type, c.closeness ? `близость ${c.closeness}/5` : null, c.address_form ? `на «${c.address_form}»` : null]
-                  .filter(Boolean)
-                  .join(" • ")}
-              </div>
+              <button
+                className="btn-primary small mt8"
+                onClick={() =>
+                  onGenerate({ contactId: c.id, contactName: c.name, eventType: "birthday" })
+                }
+              >
+                Сгенерировать
+              </button>
             </li>
           ))}
         </ul>

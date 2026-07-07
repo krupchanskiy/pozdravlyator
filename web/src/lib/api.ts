@@ -3,6 +3,7 @@ import type {
   Category,
   Contact,
   ContactInput,
+  EventType,
   Profile,
   StyleExample,
   StyleLabel,
@@ -214,4 +215,28 @@ export async function saveStyleSettings(input: StyleSettingsInput): Promise<void
     .from("pzd_style_settings")
     .upsert({ user_id: uid, ...input }, { onConflict: "user_id" });
   if (error) throw error;
+}
+
+// --- Генерация поздравлений (/api/generate) ---
+
+export type GenerateResult =
+  | { ok: true; variants: string[]; warning: string | null; generationId: string | null }
+  | { ok: false; message: string; retriable: boolean };
+
+export async function generateGreeting(
+  contactId: string,
+  eventType: EventType,
+  userWishes: string | null,
+): Promise<GenerateResult> {
+  const { data, error } = await supabase.functions.invoke("generate", {
+    body: { contact_id: contactId, event_type: eventType, user_wishes: userWishes },
+  });
+  if (error) {
+    // Платформенная/сетевая ошибка (не наш обработанный кейс).
+    return { ok: false, message: "Не удалось связаться с сервером. Попробуйте ещё раз.", retriable: true };
+  }
+  if (data?.error) {
+    return { ok: false, message: data.message ?? "Ошибка генерации", retriable: Boolean(data.retriable) };
+  }
+  return { ok: true, variants: data.variants, warning: data.warning, generationId: data.generation_id };
 }

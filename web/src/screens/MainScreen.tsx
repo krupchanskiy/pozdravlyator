@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
 import { getUpcomingEvents } from "../lib/api";
 import type { UpcomingEvent } from "../lib/types";
+import type { GenTarget } from "../App";
 import { EVENT_LABELS, formatDayMonth, formatDaysUntil } from "../lib/format";
 
 interface Props {
   firstName: string | null;
   onGoContacts: () => void;
+  onGenerate: (t: GenTarget) => void;
 }
 
 // Главный экран — список ближайших событий (/api/events/upcoming).
-export function MainScreen({ firstName, onGoContacts }: Props) {
+export function MainScreen({ firstName, onGoContacts, onGenerate }: Props) {
   const [events, setEvents] = useState<UpcomingEvent[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,6 +60,14 @@ export function MainScreen({ firstName, onGoContacts }: Props) {
                     {e.relationship_type ? ` • ${e.relationship_type}` : ""}
                     {e.closeness ? ` • близость ${e.closeness}/5` : ""}
                   </div>
+                  <button
+                    className="btn-primary small mt8"
+                    onClick={() =>
+                      onGenerate({ contactId: e.contact_id, contactName: e.name, eventType: e.event_type })
+                    }
+                  >
+                    Сгенерировать
+                  </button>
                 </div>
               </li>
             ))}

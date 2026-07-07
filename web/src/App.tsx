@@ -8,15 +8,24 @@ import { TimezoneGate } from "./screens/TimezoneGate";
 import { MainScreen } from "./screens/MainScreen";
 import { ContactsScreen } from "./screens/ContactsScreen";
 import { StyleScreen } from "./screens/StyleScreen";
+import { GenerateScreen } from "./screens/GenerateScreen";
+import type { EventType } from "./lib/types";
 import "./App.css";
 
 type Tab = "events" | "contacts" | "style";
+
+export interface GenTarget {
+  contactId: string;
+  contactName: string;
+  eventType: EventType;
+}
 
 export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("events");
+  const [gen, setGen] = useState<GenTarget | null>(null);
 
   const loadProfile = useCallback(async () => {
     try {
@@ -60,6 +69,17 @@ export default function App() {
     return <TimezoneGate onDone={loadProfile} />;
   }
 
+  if (gen) {
+    return (
+      <GenerateScreen
+        contactId={gen.contactId}
+        contactName={gen.contactName}
+        initialEventType={gen.eventType}
+        onBack={() => setGen(null)}
+      />
+    );
+  }
+
   return (
     <div className="screen">
       <header className="app-header">
@@ -83,9 +103,13 @@ export default function App() {
 
       <main className="content">
         {tab === "events" && (
-          <MainScreen firstName={profile?.first_name ?? null} onGoContacts={() => setTab("contacts")} />
+          <MainScreen
+            firstName={profile?.first_name ?? null}
+            onGoContacts={() => setTab("contacts")}
+            onGenerate={setGen}
+          />
         )}
-        {tab === "contacts" && <ContactsScreen />}
+        {tab === "contacts" && <ContactsScreen onGenerate={setGen} />}
         {tab === "style" && <StyleScreen />}
       </main>
     </div>
